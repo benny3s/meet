@@ -371,6 +371,13 @@ ul.plain li .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .detail p{margin:0 0 9px}
 .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:22px 6px}
 footer{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0 4px}
+/* 만든 사람의 다른 프로젝트로 (2026-09-21 Benny) */
+.more{text-align:center;margin:6px 0 4px}
+.more a{display:inline-block;color:var(--muted);font-size:12.5px;line-height:1.2;
+  text-decoration:none;padding:10px 15px;border:1px solid var(--line);border-radius:999px;
+  background:var(--card);transition:color .12s ease,border-color .12s ease}
+.more a:hover{color:var(--accent);border-color:var(--accent)}
+.more a:active{background:var(--soft)}
 
 /* ── 곡 / 이력 ── */
 .sec{margin-bottom:18px}
@@ -658,6 +665,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 </section>
 
 <footer id="foot"></footer>
+<p class="more"><a href="https://benny3s.github.io/" target="_blank" rel="noopener">🧭 개발자의 다른 프로젝트도 구경하기 →</a></p>
 </div>
 
 <!-- ══════════ 약속 선택 ══════════ -->
@@ -831,7 +839,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21n";
+const BUILD = "2026-09-21o";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
