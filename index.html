@@ -464,6 +464,8 @@ table.sum tbody tr:hover td.go{color:var(--accent);opacity:1}
 [hidden]{display:none !important}
 .wholine{display:flex;align-items:center;gap:8px;min-width:0;font-size:14.5px}
 .wholine .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);flex:0 0 auto}
+.wholine .dot.none{background:transparent;border:1px solid var(--muted)}
+#whoNone .wholine{color:var(--muted);font-size:13.5px}
 .fixedline{margin:10px 0 0;color:var(--accent);font-weight:700;font-size:14px}
 /* 이름 밑 '최근 수정' */
 table.sheet .nmbtn .sub,table.sheet th.corner .sub{display:block;font-weight:500;font-size:10px;
@@ -592,6 +594,13 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
         <button class="btn ghost sm" id="whoChange" type="button">바꾸기</button>
       </div>
     </div>
+    <!-- 이름을 아직 안 골랐을 때도 한 줄만 (2026-09-21 Benny: "누구세요 디폴트로 할 필요 없을 것 같아") -->
+    <div id="whoNone" hidden>
+      <div class="spread">
+        <span class="wholine"><span class="dot none"></span>보는 중 — 칠하려면 이름이 필요해요</span>
+        <button class="btn ghost sm" id="whoStart" type="button">이름 고르기</button>
+      </div>
+    </div>
     <div id="whoPick">
       <h2>누구세요?</h2>
       <p class="hint" id="whoHint"></p>
@@ -665,6 +674,10 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
       <div class="tbar-wrap"><div class="tbar ro" id="dmViewBar"></div></div>
       <p class="dm-vmemo" id="dmViewMemo" hidden></p>
       <button class="btn ghost sm" id="dmMineBtn" type="button" style="padding-left:0;margin:6px 0 10px">내 시간 칠하기 →</button>
+    </div>
+    <div id="dmNoName" hidden>
+      <p class="hint" style="margin:6px 0 10px">이 날 시간을 칠하려면 이름을 먼저 골라주세요.</p>
+      <button class="btn primary" id="dmName" type="button" style="margin-bottom:12px">이름 고르기 →</button>
     </div>
     <div id="dmMine">
       <div class="spread" style="margin-bottom:4px">
@@ -805,7 +818,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21h";
+const BUILD = "2026-09-21i";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1205,9 +1218,12 @@ function renderAll(){
 /* 이름 입력칸은 '＋ 새 이름' 을 눌렀을 때만 펼친다 (2026-09-21 Benny) */
 let whoAdd = false;
 function renderWho(){
+  /* 이름이 없어도 '누구세요' 카드를 펼치지 않는다 — 한 줄만 두고 칠할 때 고른다 (2026-09-21 Benny) */
   const picked = !!me && !whoOpen;
+  const none   = !me && !whoOpen;
   $("#whoPicked").hidden = !picked;
-  $("#whoPick").hidden = picked;
+  $("#whoNone").hidden   = !none;
+  $("#whoPick").hidden   = picked || none;
   $("#whoName").textContent = me || "";
   $("#whoKeepRow").hidden = !me;
 
@@ -1229,15 +1245,18 @@ function renderWho(){
 
   const open = whoAdd || !mem.length;          // 아직 아무도 없으면 바로 입력칸
   $("#whoAddRow").hidden = !open;
+  if (open && !$("#whoInput").value) $("#whoInput").value = lastName();
   $("#whoHint").textContent = mem.length
     ? "내 이름을 누르면 그 이름으로 칠합니다. 없으면 ＋ 새 이름."
     : "이름을 적으면 바로 시작합니다.";
 }
+function lastName(){ try { return localStorage.getItem("meet_lastname") || ""; } catch(e){ return ""; } }
 function pickMe(n){
   n = String(n || "").trim();
   if (!n) return;
   me = n; whoOpen = false; whoAdd = false;
   localStorage.setItem("meet_name:" + M, n);
+  try { localStorage.setItem("meet_lastname", n); } catch(e){}
   $("#whoInput").value = "";
   if (!members().includes(n)){
     act({ action:"member_add", name:n }, n + " 님 추가됨", () => { if (!ST.members.includes(n)) ST.members.push(n); });
@@ -1397,6 +1416,7 @@ function openDay(d, who, mode){
   $("#dmInput").value = noteDraft[d] || "";
   $("#dmMine").hidden = !me || !!v;
   $("#dmView").hidden = !v;
+  $("#dmNoName").hidden = !!me || !!v;          // 이름이 없으면 고르러 가는 버튼만
   if (v){
     const hrs = (hoursOf()[v] || {})[d], memo = (notesOf()[v] || {})[d];
     const st = $("#dmViewState");
@@ -1406,7 +1426,8 @@ function openDay(d, who, mode){
     roBar($("#dmViewBar"), d, hrs);
     $("#dmViewMemo").hidden = !memo;
     $("#dmViewMemo").textContent = memo ? "“" + memo + "”" : "";
-    $("#dmMineBtn").hidden = !me;
+    $("#dmMineBtn").hidden = false;
+    $("#dmMineBtn").textContent = me ? "내 시간 칠하기 →" : "이름 넣고 칠하기 →";
   }
   $("#dmSet").open = false;
   renderDmAdmin(d);
@@ -1765,7 +1786,15 @@ $("#whoChange").onclick = () => { whoOpen = true; whoAdd = false; renderWho(); }
 $("#whoKeep").onclick   = () => { whoOpen = false; whoAdd = false; renderWho(); };
 
 $("#dmClose").onclick   = closeDay;
-$("#dmMineBtn").onclick = () => { const d = dmDate; if (d) openDay(d); };
+$("#dmMineBtn").onclick = () => { if (!me){ askName(); return; } const d = dmDate; if (d) openDay(d); };
+/** 이름 없이 칠하려 할 때 — 창을 닫고 '누구세요' 를 펼친다 */
+function askName(){
+  closeDay(); whoOpen = true; whoAdd = false; renderWho();
+  $("#whoCard").scrollIntoView({ behavior:"smooth", block:"center" });
+  setTimeout(() => { if (!$("#whoAddRow").hidden) $("#whoInput").focus(); }, 300);
+}
+$("#dmName").onclick = askName;
+$("#whoStart").onclick = () => { whoOpen = true; renderWho(); };
 $("#dayModal").addEventListener("click", e => { if (e.target.id === "dayModal") closeDay(); });
 $("#dmInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#dmSave").click(); });
 $("#dmClear").onclick = () => {
