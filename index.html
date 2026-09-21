@@ -523,6 +523,19 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 .ad dd{margin:0;overflow-wrap:anywhere}
 .ad .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
 .ad.gone{opacity:.6}
+/* 골라서 지우기 (21l) */
+.ad .selrow{display:flex;align-items:flex-start;gap:10px}
+.ad .selrow input{width:21px;height:21px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--accent)}
+.ad.sel{border-color:var(--accent);box-shadow:0 0 0 2px rgba(var(--accent-rgb),.16)}
+.adbar{position:sticky;top:8px;z-index:5;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin-top:12px;padding:9px 10px 9px 14px;border-radius:13px;
+  background:var(--accent);color:var(--on-accent);font-weight:700;font-size:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.adbar .row{gap:6px;flex-wrap:nowrap}
+.adbar .btn{min-height:38px;padding:7px 11px;font-size:13px;
+  background:rgba(255,255,255,.18);border-color:transparent;color:inherit}
+.adbar .btn.go{background:#fff;color:var(--warn);border-color:transparent}
+.ad.dying{opacity:.35;pointer-events:none}
 .hourrow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
 .hourrow select{flex:0 0 96px;min-width:0}
 </style>
@@ -573,10 +586,19 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
       <h2 style="margin:0">약속 관리 <span class="cnt" id="adCnt"></span></h2>
       <button class="btn ghost sm" id="adReload" type="button">새로고침</button>
     </div>
-    <p class="hint">만들어진 약속 전부입니다. 마지막 수정이 최근인 것부터 — 아래로 갈수록 오래된 것.</p>
+    <p class="hint">만들어진 약속 전부입니다. 마지막 수정이 최근인 것부터 — 아래로 갈수록 오래된 것.<br>
+      왼쪽 네모를 눌러 여러 개를 고른 뒤 한 번에 지울 수 있습니다.</p>
     <div class="row" style="margin-top:12px">
       <a class="btn ghost" id="adNew" href="#">＋ 새 약속</a>
+      <button class="btn ghost sm" id="adAll" type="button">전체 선택</button>
     </div>
+  </div>
+  <div class="adbar" id="adBar" hidden>
+    <span id="adSelCnt">0개 선택</span>
+    <span class="row">
+      <button class="btn sm" id="adClear" type="button">해제</button>
+      <button class="btn sm go" id="adDel" type="button">선택 지우기</button>
+    </span>
   </div>
   <div id="adList"></div>
 </section>
@@ -809,7 +831,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21k";
+const BUILD = "2026-09-21l";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -962,7 +984,45 @@ async function loadAdmin(){
     adRows = [];
     setStatus("불러오기 실패 — " + e.message, "err");
   }
+  const live = {}; adRows.forEach(m => live[m.id] = 1);
+  Object.keys(adSel).forEach(id => { if (!live[id]) delete adSel[id]; });
   renderAdmin();
+}
+
+/* ═══ 골라서 지우기 (21l)
+   Benny: "admin 에서 뭐 하나 지우려는데 엄청 오래걸려, 하나씩 지우는거랑 선택해서 여러개 지우는거도 추가해줘"
+   느렸던 이유 둘 — ① 서버 응답을 **기다렸다가** 화면에서 지웠다 ② 하나씩 부르면 탭 6개를 개수만큼 다시 썼다.
+   → ① 화면에서는 먼저 지우고(낙관적) 실패하면 되돌린다 ② 서버에 `meet_remove_many` 로 한 번에 보낸다. */
+let adSel = {};
+function adSelIds(){ return Object.keys(adSel).filter(id => adSel[id]); }
+function renderAdBar(){
+  const ids = adSelIds();
+  $("#adBar").hidden = ids.length === 0;
+  $("#adSelCnt").textContent = ids.length + "개 선택";
+  $("#adAll").textContent = (adRows.length && ids.length === adRows.length) ? "전체 해제" : "전체 선택";
+}
+/** 화면에서 먼저 지우고, 서버엔 한 번만 보낸다. 실패하면 되돌린다. */
+async function adRemove(ids, label){
+  ids = ids.filter(Boolean);
+  if (!ids.length) return;
+  const keep = adRows.slice();                       // 되돌리기용
+  const gone = {}; ids.forEach(id => { gone[id] = 1; delete adSel[id]; });
+  adRows = adRows.filter(x => !gone[x.id]);
+  ids.forEach(recentDrop);
+  renderAdmin();
+  setStatus(label + " 지우는 중…");
+  try {
+    /* 서버는 한 번에 50개까지 본다 → 40개씩 끊어 보낸다 */
+    for (let i = 0; i < ids.length; i += 40){
+      await api({ action:"meet_remove_many", ids: ids.slice(i, i+40).join(",") });
+    }
+    listSnapSave(adRows);                            // 약속 선택 목록도 같이 맞춰둔다
+    pickRows = null;
+    setStatus(label + " 지웠습니다", "ok");
+  } catch(e){
+    adRows = keep; renderAdmin();                    // 되돌리기
+    setStatus("실패 — " + e.message + " (다시 시도해주세요)", "err");
+  }
 }
 function renderAdmin(){
   const box = $("#adList");
@@ -975,17 +1035,27 @@ function renderAdmin(){
   });
   box.innerHTML = "";
   $("#adCnt").textContent = order.length ? order.length + "개" : "0개";
+  renderAdBar();
   if (!order.length){
     box.innerHTML = '<div class="card"><p class="hint" style="margin:0">아직 만들어진 약속이 없습니다.</p></div>';
     return;
   }
   order.forEach(m => {
-    const card = document.createElement("div"); card.className = "card ad";
+    const card = document.createElement("div"); card.className = "card ad" + (adSel[m.id] ? " sel" : "");
+    const row = document.createElement("label"); row.className = "selrow";
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!adSel[m.id];
+    cb.setAttribute("aria-label", (m.title || "약속") + " 고르기");
+    cb.onchange = () => {
+      if (cb.checked) adSel[m.id] = true; else delete adSel[m.id];
+      card.classList.toggle("sel", cb.checked);
+      renderAdBar();
+    };
     const h = document.createElement("div"); h.className = "ttl";
     h.textContent = m.title || "(이름 없는 약속)";
     if (m.fixed){ const b = document.createElement("span"); b.className = "badge fix"; b.textContent = "정해짐"; h.appendChild(b); }
     if (m.to && m.to < todayIso()){ const b = document.createElement("span"); b.className = "badge old"; b.textContent = "지난 약속"; h.appendChild(b); }
-    card.appendChild(h);
+    row.append(cb, h);
+    card.appendChild(row);
 
     const dl = document.createElement("dl");
     const add = (k, v) => { if (!v) return;
@@ -1008,17 +1078,10 @@ function renderAdmin(){
     acts.appendChild(open);
     const del = document.createElement("button");
     del.className = "btn ghost danger"; del.type = "button"; del.textContent = "지우기";
-    del.onclick = async () => {
+    del.onclick = () => {
       const t = m.title || "이 약속";
       if (!confirm("“" + t + "” 을 통째로 지웁니다.\n칠한 시간·메모·참여자까지 전부 사라지고 되돌릴 수 없어요.\n계속할까요?")) return;
-      setStatus("지우는 중…");
-      try {
-        await api({ action:"meet_remove", m: m.id });
-        recentDrop(m.id);
-        adRows = adRows.filter(x => x.id !== m.id);
-        renderAdmin();
-        setStatus("“" + t + "” 지웠습니다", "ok");
-      } catch(e){ setStatus("실패 — " + e.message, "err"); }
+      adRemove([m.id], "“" + t + "” 을");        // 기다리지 않고 바로 화면에서 뺀다
     };
     acts.appendChild(del);
     card.appendChild(acts);
@@ -1926,6 +1989,23 @@ $("#pickNew").onclick = () => { closeModal("pickModal"); if (M) location.href = 
 $("#pickQ").addEventListener("input", renderPick);
 $("#adReload").onclick = () => loadAdmin();
 $("#adNew").onclick = e => { e.preventDefault(); location.href = location.pathname; };
+$("#adAll").onclick = () => {
+  const all = adRows.length && adSelIds().length === adRows.length;
+  adSel = {};
+  if (!all) adRows.forEach(m => adSel[m.id] = true);
+  renderAdmin();
+};
+$("#adClear").onclick = () => { adSel = {}; renderAdmin(); };
+$("#adDel").onclick = () => {
+  const ids = adSelIds();
+  if (!ids.length) return;
+  const by = {}; adRows.forEach(m => by[m.id] = m.title || "(이름 없는 약속)");
+  const names = ids.map(id => by[id]).filter(Boolean);
+  const shown = names.slice(0, 6).map(t => " · " + t).join("\n") + (names.length > 6 ? "\n … 외 " + (names.length-6) + "개" : "");
+  if (!confirm("약속 " + ids.length + "개를 통째로 지웁니다.\n" + shown +
+               "\n\n칠한 시간·메모·참여자까지 전부 사라지고 되돌릴 수 없어요.\n계속할까요?")) return;
+  adRemove(ids, "약속 " + ids.length + "개를");
+};
 
 /* 약속을 통째로 지운다 — 링크를 아는 사람은 누구나 지울 수 있으니 확인을 두 번 거친다 */
 $("#s_delete").onclick = async () => {
