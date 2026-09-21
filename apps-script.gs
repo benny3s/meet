@@ -1,5 +1,5 @@
 /**
- * 약속 잡기 (meet) — Google Apps Script 웹앱 (v1)
+ * 약속 잡기 (meet) — Google Apps Script 웹앱 (v2)
  *
  * benny3s.github.io/meet/ 의 저장소. 밴드매니저의 '캘린더'만 떼어내 만들었습니다.
  * 약속 하나 = 링크 하나(`?m=<약속id>`). **목록은 절대 내려주지 않습니다** — 링크를 아는 사람만 봅니다.
@@ -483,6 +483,15 @@ function act_(action, p) {
     if (!got) tl.push({ '약속': mid, '이름': name, '시각': tnow });
     put_('edit', tl);
     return;
+  }
+
+  /* ── 약속 통째로 지우기 (v2) ── */
+  if (action === 'meet_remove') {
+    put_('meet', rows_('meet').filter(function (x) { return x.id !== mid; }));
+    ['conf','member','resp','note','edit'].forEach(function (k) {
+      put_(k, rows_(k).filter(function (x) { return x['약속'] !== mid; }));
+    });
+    return { gone: true };
   }
 
   if (action === 'reset_answers') {

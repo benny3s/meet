@@ -243,8 +243,6 @@ table.sheet td.on .hr,table.sheet td.on .mm{color:var(--on-accent);opacity:1}
 .modal,.formback{overscroll-behavior:contain;touch-action:none}
 .modal .sheet{touch-action:pan-x pan-y}
 html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
-.hourrow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
-.hourrow select{flex:0 0 96px;min-width:0}
 .hpeople .wholine{display:flex;flex-wrap:wrap;gap:4px 6px;margin:2px 0 8px}
 .hpeople .absline{margin:2px 0}
 .hpeople .wholine.und .whob{background:transparent;border:1px dashed var(--line);color:var(--muted);font-weight:500}
@@ -494,6 +492,10 @@ table.sheet tfoot th.nm{font-size:11px;color:var(--muted);font-weight:600}
 .list .li{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}
 .list .li:last-child{border-bottom:0}
 .list .li .nm{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .li .sub2{display:block;font-weight:400;font-size:11.5px;color:var(--muted);margin-top:1px}
+.list .li .open{appearance:none;border:0;background:transparent;font:inherit;color:inherit;text-align:left;
+  cursor:pointer;flex:1 1 auto;min-width:0;padding:4px 0;min-height:42px;font-weight:600;font-size:14px}
+h2 .cnt{color:var(--muted);font-weight:500;font-size:13px;margin-left:4px}
 .chip.add{border-style:dashed;color:var(--accent);font-weight:600}
 .chip.add[aria-pressed="true"]{background:var(--bg);color:var(--accent);border-color:var(--accent)}
 html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
@@ -535,6 +537,16 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
     <div class="row" style="justify-content:flex-end;margin-top:14px">
       <button class="btn primary" id="n_make" type="button">만들기 →</button>
     </div>
+  </div>
+
+  <!-- 이 기기에서 열었던 약속들 (서버에는 목록이 없다) -->
+  <div class="card" id="recentCard" hidden>
+    <div class="spread">
+      <h2 style="margin:0">내 약속 <span class="cnt" id="recentCnt"></span></h2>
+      <button class="btn ghost sm" id="recentClear" type="button">목록 비우기</button>
+    </div>
+    <p class="hint">이 기기에서 열었던 약속이에요. 다른 사람·다른 기기에는 안 보입니다.</p>
+    <div class="list" id="recentList"></div>
   </div>
 </section>
 
@@ -733,6 +745,9 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
       <span style="flex:1"></span>
       <button class="btn ghost danger" id="s_reset" type="button">응답 전부 지우기</button>
     </div>
+    <div class="row" style="margin-top:6px;justify-content:flex-end">
+      <button class="btn ghost danger" id="s_delete" type="button">이 약속 지우기</button>
+    </div>
   </div>
 </div>
 
@@ -745,7 +760,7 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21b";
+const BUILD = "2026-09-21c";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -852,6 +867,51 @@ function answered(n){ const H = hoursOf()[n] || {}; return dates().some(d => Arr
 function responders(){ return members().filter(answered); }
 function availAt(d,h){ const H = hoursOf(); return members().filter(n => ((H[n] || {})[d] || []).includes(h)); }
 
+/* ═══ 이 기기가 기억하는 약속들 ═══
+   서버에는 목록이 없다(링크 아는 사람만 본다). 그래서 "내가 몇 개 만들었나" 는
+   이 기기에 쌓아둔 기록으로만 본다. 다른 사람·다른 기기에는 안 보인다. */
+const RECENT_KEY = "meet_recent", RECENT_MAX = 30;
+function recentGet(){
+  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]"); return Array.isArray(l) ? l : []; }
+  catch(e){ return []; }
+}
+function recentPut(l){ try { localStorage.setItem(RECENT_KEY, JSON.stringify(l.slice(0, RECENT_MAX))); } catch(e){} }
+function recentTouch(id, title){
+  if (!id) return;
+  const l = recentGet().filter(x => x && x.id !== id);
+  l.unshift({ id, title: String(title || "").slice(0, 60), at: Date.now() });
+  recentPut(l);
+}
+function recentDrop(id){ recentPut(recentGet().filter(x => x && x.id !== id)); }
+function agoText(t){
+  const d = Math.floor((Date.now() - (t || 0)) / 86400000);
+  if (d <= 0) return "오늘";
+  if (d === 1) return "어제";
+  if (d < 30) return d + "일 전";
+  const o = new Date(t);
+  return (o.getMonth()+1) + "/" + o.getDate();
+}
+function renderRecent(){
+  const l = recentGet();
+  $("#recentCard").hidden = !l.length;
+  $("#recentCnt").textContent = l.length ? l.length + "개" : "";
+  const box = $("#recentList"); box.innerHTML = "";
+  l.forEach(x => {
+    const row = document.createElement("div"); row.className = "li";
+    const go = document.createElement("button"); go.type = "button"; go.className = "open";
+    go.textContent = x.title || "(이름 없는 약속)";
+    const sub = document.createElement("span"); sub.className = "sub2";
+    sub.textContent = "마지막으로 연 날 " + agoText(x.at);
+    go.appendChild(sub);
+    go.onclick = () => { location.href = location.pathname + "?m=" + encodeURIComponent(x.id); };
+    const rm = document.createElement("button");
+    rm.className = "btn ghost sm"; rm.type = "button"; rm.textContent = "목록에서 빼기";
+    rm.title = "약속 자체는 지워지지 않습니다";
+    rm.onclick = () => { recentDrop(x.id); renderRecent(); };
+    row.append(go, rm); box.appendChild(row);
+  });
+}
+
 /* ═══ 스냅샷 — 서버를 기다리는 동안 지난 화면을 먼저 ═══ */
 const SNAP_TTL = 12 * 3600 * 1000;
 function snapKey(){ return "meet_snap:" + M; }
@@ -934,6 +994,7 @@ async function load(fresh){
 
 /* ═══ 화면 ═══ */
 function showNew(){
+  renderRecent();
   $("#view-new").hidden = false;
   $("#view-meet").hidden = true;
   $("#linkBtn").hidden = true;
@@ -958,6 +1019,7 @@ function renderAll(){
   $("#subtitle").textContent = bits.join(" · ");
   document.title = (m.title || "약속") + " — 약속 잡기";
 
+  recentTouch(M, m.title);
   $("#mTitle").textContent = m.title || "약속";
   $("#mSub").textContent = (m.place ? m.place + " · " : "") +
     (dates().length ? fmtFull(dates()[0]) + " ~ " + fmtFull(dates()[dates().length-1]) : "날짜 미정") +
@@ -1620,6 +1682,26 @@ $("#memberAdd").onclick = () => {
 };
 $("#memberInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#memberAdd").click(); });
 $("#s_copy").onclick = copyLink;
+$("#recentClear").onclick = () => {
+  if (!confirm("이 기기의 '내 약속' 목록만 비웁니다. 약속 자체는 그대로 남아요. 계속할까요?")) return;
+  recentPut([]); renderRecent();
+  setStatus("목록을 비웠습니다", "ok");
+};
+/* 약속을 통째로 지운다 — 링크를 아는 사람은 누구나 지울 수 있으니 확인을 두 번 거친다 */
+$("#s_delete").onclick = async () => {
+  const t = (meet() && meet().title) || "이 약속";
+  if (!confirm("“" + t + "” 을 통째로 지웁니다.\n모두가 칠한 시간·메모·참여자까지 전부 사라지고 되돌릴 수 없어요.\n계속할까요?")) return;
+  const typed = prompt("정말 지우려면 약속 이름을 그대로 적어주세요:\n" + t);
+  if (typed === null) return;
+  if (typed.trim() !== t.trim()){ setStatus("이름이 달라서 지우지 않았습니다", "err"); return; }
+  setStatus("지우는 중…");
+  try {
+    await api({ action:"meet_remove", m:M });
+    recentDrop(M);
+    setStatus("지웠습니다", "ok");
+    location.href = location.pathname;
+  } catch(e){ setStatus("실패 — " + e.message, "err"); }
+};
 $("#s_reset").onclick = () => {
   if (!confirm("모두가 칠한 걸 전부 지웁니다. 계속할까요?")) return;
   act({ action:"reset_answers" }, "초기화됨", () => { ST.hours = {}; ST.notes = {}; ST.edited = {}; sel = new Set(); noteDraft = {}; noneSel = new Set(); });
