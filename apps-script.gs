@@ -1,5 +1,5 @@
 /**
- * 약속 잡기 (meet) — Google Apps Script 웹앱 (v5)
+ * 약속 잡기 (meet) — Google Apps Script 웹앱 (v6)
  *
  * benny3s.github.io/meet/ 의 저장소. 밴드매니저의 '캘린더'만 떼어내 만들었습니다.
  * 약속 하나 = 링크 하나(`?m=<약속id>`). **목록은 절대 내려주지 않습니다** — 링크를 아는 사람만 봅니다.
@@ -439,6 +439,8 @@ function handle_(p) {
     lock.waitLock(25000);
     var r = act_(action, p);
     if (r && r.ok === false) return r;
+    /* 여러 개 지우기처럼 '어느 약속' 이랄 게 없는 동작은 state_ 를 만들지 않는다 (v6) */
+    if (r && r.done) { SpreadsheetApp.flush(); touchFlush_(); return r; }
     SpreadsheetApp.flush();
     var out = state_(r && r.m ? r.m : p.m);
     if (r && r.m) out.newId = r.m;
@@ -477,6 +479,20 @@ function act_(action, p) {
     if (p.dates !== undefined) setConf_(id, 'dates', cleanDates_(p.dates));
     if (p.who) addMember_(id, String(p.who).trim());
     return { m: id };
+  }
+
+
+  /* ── 여러 개 한 번에 지우기 (v6, 2026-09-21 Benny: "하나씩 지우는거랑 선택해서 여러개 지우는거도")
+     하나씩 meet_remove 를 여러 번 부르면 탭 6개 × 개수만큼 시트를 다시 쓴다.
+     여기서는 **개수와 상관없이 탭당 한 번씩**만 쓴다. */
+  if (action === 'meet_remove_many') {
+    var want = idSet_(p.ids);
+    var n = 0; for (var q in want) n++;
+    if (!n) return { ok: false, error: '지울 약속을 고르지 않았습니다' };
+    var had = 0, ml0 = rows_('meet');
+    for (i = 0; i < ml0.length; i++) if (want[ml0[i].id]) had++;
+    removeMeets_(want);
+    return { done: true, ok: true, removed: had, ids: Object.keys(want) };
   }
 
   if (!mid || !meetRow_(mid)) return { ok: false, error: '없는 약속입니다 (링크를 확인해주세요)' };
@@ -579,12 +595,10 @@ function act_(action, p) {
 
   /* ── 약속 통째로 지우기 (v2) ── */
   if (action === 'meet_remove') {
-    put_('meet', rows_('meet').filter(function (x) { return x.id !== mid; }));
-    ['conf','member','resp','note','edit'].forEach(function (k) {
-      put_(k, rows_(k).filter(function (x) { return x['약속'] !== mid; }));
-    });
+    removeMeets_(idSet_(mid));
     return { gone: true };
   }
+
 
   if (action === 'reset_answers') {
     ['resp','note','edit'].forEach(function (k) {
@@ -594,6 +608,14 @@ function act_(action, p) {
   }
 
   return { ok: false, error: 'unknown action: ' + action };
+}
+
+/** 주어진 id 들을 여섯 탭에서 한 번에 지운다 (탭당 쓰기 1회) */
+function removeMeets_(want) {
+  put_('meet', rows_('meet').filter(function (x) { return !want[x.id]; }));
+  ['conf','member','resp','note','edit'].forEach(function (k) {
+    put_(k, rows_(k).filter(function (x) { return !want[x['약속']]; }));
+  });
 }
 
 function addMember_(mid, name) {
