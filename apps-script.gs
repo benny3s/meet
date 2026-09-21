@@ -1,5 +1,5 @@
 /**
- * 약속 잡기 (meet) — Google Apps Script 웹앱 (v6)
+ * 약속 잡자 (meet) — Google Apps Script 웹앱 (v7)
  *
  * benny3s.github.io/meet/ 의 저장소. 밴드매니저의 '캘린더'만 떼어내 만들었습니다.
  * 약속 하나 = 링크 하나(`?m=<약속id>`). **목록은 절대 내려주지 않습니다** — 링크를 아는 사람만 봅니다.
@@ -283,7 +283,7 @@ function state_(mid) {
   var out = {
     ok: true, meet: null, members: [], dates: [],
     hourStart: CONF_DEFAULT.hourStart, hourEnd: CONF_DEFAULT.hourEnd,
-    windows: {}, hours: {}, notes: {}, edited: {},
+    windows: {}, hours: {}, notes: {}, edited: {}, picks: [],
     now: Utilities.formatDate(new Date(), 'Asia/Seoul', "yyyy-MM-dd'T'HH:mm:ss")
   };
   mid = String(mid || '').trim();
@@ -312,6 +312,7 @@ function state_(mid) {
       }
       keep.sort(); out.dates = keep;
     } else if (cs[i].key === 'windows') out.windows = parseWindows_(cs[i].value);
+    else if (cs[i].key === 'picks') out.picks = parsePicks_(cs[i].value);
   }
 
   var ms = rows_('member');
@@ -517,6 +518,8 @@ function act_(action, p) {
     put_('meet', list);
     if (p.dates   !== undefined) setConf_(mid, 'dates', cleanDates_(p.dates));
     if (p.windows !== undefined) setConf_(mid, 'windows', JSON.stringify(parseWindows_(p.windows)));
+    /* 후보 시간 (v7) — "2026-10-04 19:00~22:00" 문자열 여러 개. 확정은 여전히 한 개다. */
+    if (p.picks   !== undefined) setConf_(mid, 'picks', JSON.stringify(parsePicks_(p.picks)));
     return;
   }
 
@@ -627,6 +630,34 @@ function addMember_(mid, name) {
   list.push({ '약속': mid, '이름': name });
   put_('member', list);
   return true;
+}
+
+/** 후보 시간 목록 — JSON 배열이든 쉼표 목록이든 받아서 "YYYY-MM-DD HH:MM~HH:MM" 만 남긴다 (v7) */
+function parsePicks_(raw) {
+  var list = [];
+  if (raw === null || raw === undefined) return list;
+  if (Object.prototype.toString.call(raw) === '[object Array]') list = raw;
+  else {
+    var t = String(raw).trim();
+    if (!t) return list;
+    if (t.charAt(0) === '[') { try { list = JSON.parse(t); } catch (e) { list = []; } }
+    if (!list.length) list = t.split(/[\n,]/);
+  }
+  var out = [], seen = {};
+  for (var i = 0; i < list.length; i++) {
+    var v = String(list[i] === null || list[i] === undefined ? '' : list[i]).trim();
+    var mm = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})~(\d{2}):(\d{2})$/.exec(v);
+    if (!mm) continue;
+    if (normDate_(mm[1]) !== mm[1]) continue;                 // 진짜 있는 날짜만
+    var a1 = parseInt(mm[2], 10), b1 = parseInt(mm[4], 10);
+    if (isNaN(a1) || isNaN(b1) || a1 < 0 || b1 > 24 || b1 <= a1) continue;
+    if (mm[3] !== '00' || mm[5] !== '00') continue;            // 정시만
+    if (seen[v]) continue;
+    seen[v] = 1; out.push(v);
+    if (out.length >= 20) break;
+  }
+  out.sort();
+  return out;
 }
 
 function setConf_(mid, key, value) {

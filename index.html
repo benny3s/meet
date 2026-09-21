@@ -3,24 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>약속 잡기</title>
+<title>약속 잡자</title>
 <meta name="description" content="친구들이랑 약속 날짜 정하기. 링크만 보내면 각자 되는 시간을 칠합니다.">
 <style>
 :root{
-  --bg:#f7f7f5; --card:#fff; --line:#e4e4e0; --ink:#1b1b19; --muted:#6e6e67;
-  --accent:#2f7d4f; --accent-rgb:47,125,79; --soft:#eef4ef; --on-accent:#fff;
-  --warn:#b4472f; --amber:#8a6d1f; --shadow:0 1px 2px rgba(0,0,0,.05), 0 6px 18px rgba(0,0,0,.04);
+  --bg:#f5f7f6; --card:#fff; --line:#e4e9e6; --ink:#16211c; --muted:#6b7a72;
+  --accent:#0b835b; --accent-rgb:11,131,91; --soft:#eef4f1; --on-accent:#fff;
+  --warn:#b4472f; --amber:#8a6d1f; --shadow:0 1px 2px rgba(22,33,28,.045);
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#141517; --card:#1e2023; --line:#2f3238; --ink:#ededec; --muted:#98988f;
-    --accent:#6dc08c; --accent-rgb:109,192,140; --soft:#232a25; --on-accent:#12201a;
+    --bg:#121614; --card:#1a201d; --line:#2a322d; --ink:#e9efeb; --muted:#93a29a;
+    --accent:#4ec99a; --accent-rgb:78,201,154; --soft:#1f2723; --on-accent:#08241a;
     --warn:#e08b76; --amber:#d8b75f; --shadow:none;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#141517; --card:#1e2023; --line:#2f3238; --ink:#ededec; --muted:#98988f;
-  --accent:#6dc08c; --accent-rgb:109,192,140; --soft:#232a25; --on-accent:#12201a;
+    --bg:#121614; --card:#1a201d; --line:#2a322d; --ink:#e9efeb; --muted:#93a29a;
+  --accent:#4ec99a; --accent-rgb:78,201,154; --soft:#1f2723; --on-accent:#08241a;
   --warn:#e08b76; --amber:#d8b75f; --shadow:none;
 }
 *{box-sizing:border-box}
@@ -33,15 +33,20 @@ body{
 }
 .wrap{max-width:860px;margin:0 auto}
 
-header{padding:22px 0 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-h1{margin:0;font-size:20px;letter-spacing:-.03em}
-.sub{margin:2px 0 0;color:var(--muted);font-size:12.5px;
+header{padding:16px 0 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-.035em;line-height:1.2;white-space:nowrap}
+.sub{margin:1px 0 0;color:var(--muted);font-size:12px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .titlebtn{appearance:none;border:0;background:transparent;padding:0;text-align:left;
-  color:inherit;font:inherit;cursor:pointer;min-width:0;flex:1 1 auto}
+  color:inherit;font:inherit;cursor:pointer;min-width:0;flex:1 1 auto;
+  display:flex;align-items:center;gap:9px}
+.mark{flex:0 0 auto;width:32px;height:32px;border-radius:10px;background:var(--accent);
+  color:var(--on-accent);display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:800;letter-spacing:-.04em}
+.titlebtn .tt{min-width:0;flex:1 1 auto}
 .hact{display:flex;align-items:center;gap:7px;flex:0 0 auto}
 .iconbtn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--muted);
-  font:inherit;font-size:16px;line-height:1;width:42px;height:42px;border-radius:999px;cursor:pointer;
+  font:inherit;font-size:15px;line-height:1;width:40px;height:40px;border-radius:999px;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center}
 .iconbtn:active{color:var(--accent);border-color:var(--accent)}
 .iconbtn.spin{animation:spin .8s linear infinite}
@@ -78,16 +83,16 @@ h1{margin:0;font-size:20px;letter-spacing:-.03em}
 
 section[hidden],[hidden]{display:none !important}   /* .btn 의 inline-flex 가 hidden 을 이기지 않게 */
 
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
-  padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
-.card h2{margin:0 0 4px;font-size:15px;letter-spacing:-.02em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;
+  padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
+.card h2{margin:0 0 4px;font-size:15px;font-weight:800;letter-spacing:-.025em}
 .card .hint{margin:0 0 12px;color:var(--muted);font-size:12.5px}
 
 .chips{display:flex;flex-wrap:wrap;gap:7px}
-.chip{appearance:none;font:inherit;font-size:13.5px;padding:7px 13px;border-radius:999px;
-  border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.chip{appearance:none;font:inherit;font-size:13.5px;padding:7px 15px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);
-  color:var(--on-accent);font-weight:600}
+  color:var(--on-accent);font-weight:800}
 .chip.sm{font-size:12.5px;padding:5px 11px}
 
 /* ── 시간 격자 ── */
@@ -221,18 +226,21 @@ table.sheet td.on .hr,table.sheet td.on .mm{color:var(--on-accent);opacity:1}
 .btn.tadd{width:100%;border:1.5px dashed var(--line);background:transparent;border-radius:11px;color:var(--accent);margin:0;min-height:46px}
 .sheettools{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .sheettools .btn{flex:1 1 auto}
-.tbar-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:24px 22px 6px 22px;margin:0 -16px;touch-action:pan-x}
-.tbar{display:flex;gap:3px;width:max-content}
-.tbar .tb{position:relative;appearance:none;display:flex;align-items:center;justify-content:center;border:0;width:52px;height:48px;border-radius:4px;background:var(--soft);
-  cursor:pointer;touch-action:pan-x;font:inherit;font-weight:700;color:transparent;padding:0}
-.tbar .tb[aria-pressed="true"]{background:var(--accent)}
-.tbar .tb.x{background:rgba(180,71,47,.12);color:var(--warn);font-size:18px}
-.tbar .tb::before{content:attr(data-l);position:absolute;top:-21px;left:-18px;width:36px;text-align:center;
-  font-size:11.5px;font-weight:500;color:var(--muted)}
-.tbar .tb.last::after{content:attr(data-e);position:absolute;top:-21px;right:-19px;width:36px;text-align:center;
-  font-size:11.5px;font-weight:500;color:var(--muted)}
-.tbar .tb::before,.tbar .tb.last::after{border-left:0}
-.dm-state{font-weight:700;font-size:15px}
+/* 시간 칸 — 6개씩 줄바꿈, 숫자를 칸 안에 (24시간제). 시간이 많아지면 아래로 늘어난다 */
+.tbar-wrap{padding:2px 0 0;margin:0}
+.tbar{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;width:auto}
+.tbar .tb{position:relative;appearance:none;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);width:auto;height:54px;border-radius:11px;background:var(--soft);
+  cursor:pointer;touch-action:manipulation;font:inherit;font-size:17px;font-weight:800;color:var(--muted);padding:0}
+.tbar .tb[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tbar .tb.x{background:rgba(180,71,47,.10);border-color:rgba(180,71,47,.22);color:var(--warn);font-size:18px}
+.tbar .tb::before,.tbar .tb.last::after{content:none}
+.dm-state{font-weight:800;font-size:15px}
+/* 그 날 창 아래 — 취소 / 저장 (2026-09-22 Benny) */
+.dmfoot{display:flex;gap:9px;margin:14px -16px 0;padding:13px 16px;
+  border-top:1px solid var(--line);background:var(--bg)}
+.dmfoot .btn{flex:1 1 0;height:52px;font-size:15px}
+.dmfoot .btn.primary{flex:1.6 1 0}
 /* 곡·회차 수정 창: 목록 위에 아래에서 올라오는 창으로 (2026-09-20 Benny: "수정 누르면 맨 위로 가는 것보다 그 자리에서") */
 #songForm:not([hidden]),#histForm:not([hidden]){position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:560px;
   max-height:88vh;overflow:auto;z-index:62;border-radius:16px 16px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom));
@@ -316,21 +324,25 @@ details.fold .body{padding:13px 14px 14px;display:flex;flex-direction:column;gap
 .noterow .nd.none{color:var(--warn);font-weight:600}
 
 input[type=text],input[type=date],input[type=number],input[type=time],select,textarea{
-  font:inherit;font-size:14px;padding:8px 11px;border-radius:9px;
+  font:inherit;font-size:16px;padding:12px 13px;border-radius:12px;min-height:48px;
   border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 textarea{resize:vertical;min-height:62px;line-height:1.5}
 input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
 label.fld,div.fld{display:block}
-label.fld>span,div.fld>span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+label.fld>span,div.fld>span{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:5px}
+label.fld,div.fld{margin-bottom:12px}
 
 /* 손가락으로 눌러도 옆·아래가 안 눌리게 — 모든 누를 수 있는 것은 최소 42px 높이.
    touch-action:manipulation 은 더블탭 확대 대기(300ms)를 없앤다. */
 button, .chip, .btn, a.lnk, .cardhead, .menu button { touch-action: manipulation; }
-.btn, .chip{min-height:42px;display:inline-flex;align-items:center;justify-content:center}
+.btn, .chip{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 
-.btn{appearance:none;font:inherit;font-size:14px;font-weight:600;padding:9px 15px;white-space:nowrap;
-  border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn{appearance:none;font:inherit;font-size:14px;font-weight:700;padding:9px 15px;white-space:nowrap;
+  border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:800;
+  box-shadow:0 2px 8px rgba(var(--accent-rgb),.25)}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--card);font-weight:800}
 .btn.ghost{border:0;background:transparent;color:var(--muted);padding:10px 12px;font-weight:500;font-size:13.5px}
 .btn.danger{color:var(--warn)}
 .btn.sm{font-size:13px;padding:7px 12px}
@@ -372,6 +384,13 @@ ul.plain li .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:22px 6px}
 footer{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0 4px}
 /* 만든 사람의 다른 프로젝트로 (2026-09-21 Benny) */
+.btn.wide{width:100%;height:54px;font-size:16px}
+/* 처음 오는 사람을 위한 1-2-3 (2026-09-22 Benny 시안) */
+.steps{display:flex;gap:6px;margin:0 0 12px}
+.steps .step{flex:1 1 0;min-width:0;background:rgba(var(--accent-rgb),.07);border-radius:12px;
+  padding:11px 10px;display:flex;flex-direction:column;gap:3px}
+.steps .step b{font-size:11.5px;font-weight:800;color:var(--accent)}
+.steps .step span{font-size:11.5px;color:var(--muted);line-height:1.35}
 .more{text-align:center;margin:6px 0 4px}
 .more a{display:inline-block;color:var(--muted);font-size:12.5px;line-height:1.2;
   text-decoration:none;padding:10px 15px;border:1px solid var(--line);border-radius:999px;
@@ -467,7 +486,7 @@ table.sum tbody tr:hover td.go{color:var(--accent);opacity:1}
 .votebar .tally{color:var(--muted);font-size:12.5px}
 .songpick{display:flex;flex-wrap:wrap;gap:6px}
 
-/* ═══ 약속 잡기 전용 ═══ */
+/* ═══ 약속 잡자 전용 ═══ */
 [hidden]{display:none !important}
 .wholine{display:flex;align-items:center;gap:8px;min-width:0;font-size:14.5px}
 .wholine .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);flex:0 0 auto}
@@ -489,9 +508,27 @@ table.sheet tfoot th.nm{font-size:11px;color:var(--muted);font-weight:600}
   border:1px solid var(--line);background:var(--card);border-radius:9px;font:inherit;font-size:12.5px;
   font-weight:600;color:var(--accent);padding:7px 10px;min-height:36px;cursor:pointer}
 .best .bgo.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.pickbox{margin-top:12px;border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:var(--bg);font-size:13.5px}
+.pickbox{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:11px 13px;background:var(--bg);font-size:13.5px}
 .pickbox b{display:block;margin-bottom:3px}
 .pickbox .muted{color:var(--muted)}
+.pickbox .row{margin-top:9px}
+/* 담은 후보 (2026-09-22 Benny: 선택이 곧 찜) */
+.hcell.inpick{box-shadow:inset 0 0 0 2px var(--ink)}
+.picks{margin-top:18px;border:1px solid rgba(var(--accent-rgb),.28);
+  background:rgba(var(--accent-rgb),.06);border-radius:16px;padding:14px}
+.picks .ph{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.picks .ph b{font-size:13.5px;font-weight:800}
+.picks .ph span{flex:1 1 auto;text-align:right;font-size:11.5px;color:var(--muted)}
+.picks .pnote{margin:10px 0 0;font-size:11.5px;color:var(--muted);line-height:1.5}
+.prow{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:9px 11px;margin-top:8px}
+.prow .pt{flex:1 1 auto;min-width:0}
+.prow .pt b{display:block;font-size:13.5px;font-weight:800;letter-spacing:-.03em}
+.prow .pt .ps{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.prow .btn{min-height:38px;padding:0 11px;font-size:12.5px}
+.prow .btn.x{width:38px;padding:0;color:var(--muted)}
+.badge.fixnow{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;
+  background:var(--accent);color:var(--on-accent);margin-left:6px;vertical-align:1px}
 /* 그 날 창 — 이 날로 정하기 */
 .dm-hap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
 .dm-hap #dmFixNow{color:var(--accent);font-weight:600;font-size:13.5px}
@@ -552,8 +589,11 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 
 <header>
   <button class="titlebtn" id="titleBtn" type="button" title="처음 화면으로">
-    <h1 id="h1">약속 잡기</h1>
-    <p class="sub" id="subtitle">링크를 받아 들어오면 바로 칠하면 돼요</p>
+    <span class="mark" aria-hidden="true">약</span>
+    <span class="tt">
+      <h1 id="h1">약속 잡자</h1>
+      <p class="sub" id="subtitle">링크를 받아 들어오면 바로 칠하면 돼요</p>
+    </span>
   </button>
   <span class="hact">
     <button class="iconbtn" id="linkBtn" type="button" title="링크 복사">🔗</button>
@@ -564,13 +604,18 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 
 <!-- ══════════ 새 약속 만들기 ══════════ -->
 <section id="view-new" hidden>
+  <div class="steps">
+    <div class="step"><b>1 만들기</b><span>이름만 적으면 끝</span></div>
+    <div class="step"><b>2 보내기</b><span>링크 복사 → 단톡방</span></div>
+    <div class="step"><b>3 칠하기</b><span>각자 되는 시간</span></div>
+  </div>
   <div class="card">
     <h2>새 약속 만들기</h2>
     <p class="hint">만들고 나온 링크를 친구들에게 보내면 됩니다. 로그인 없이 이름만 적고 칠해요.</p>
     <label class="fld"><span>약속 이름</span>
       <input type="text" id="n_title" maxlength="60" placeholder="예: 10월 저녁 모임"></label>
     <label class="fld"><span>내 이름</span>
-      <input type="text" id="n_who" maxlength="30" placeholder="예: 명재"></label>
+      <input type="text" id="n_who" maxlength="30" placeholder="예: 베니"></label>
     <label class="fld"><span>장소 (선택)</span>
       <input type="text" id="n_place" maxlength="60" placeholder="예: 합정 / 미정"></label>
     <div class="fld"><span>시간대 — 이 사이에서 고릅니다</span>
@@ -579,9 +624,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
         <select id="n_he"></select><span class="hint" style="margin:0">시</span>
       </div>
     </div>
-    <div class="row" style="justify-content:flex-end;margin-top:14px">
-      <button class="btn primary" id="n_make" type="button">만들기 →</button>
-    </div>
+    <button class="btn primary wide" id="n_make" type="button" style="margin-top:4px">만들기 →</button>
   </div>
 
 </section>
@@ -687,7 +730,10 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
   <div class="sheet" role="dialog" aria-modal="true">
     <div class="spread">
       <h2 style="margin:0" id="dmTitle"></h2>
-      <button class="btn ghost" id="dmClose" type="button">닫기</button>
+      <span class="row tight" style="flex:0 0 auto">
+        <button class="iconbtn" id="dmSetBtn" type="button" title="이 날 시간대 바꾸기" aria-label="이 날 설정">⚙</button>
+        <button class="iconbtn" id="dmClose" type="button" title="닫기" aria-label="닫기">✕</button>
+      </span>
     </div>
     <p class="dm-sum" id="dmSum"></p>
     <div id="dmView" hidden>
@@ -711,24 +757,25 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
       </div>
       <p class="hint" style="margin:0;font-size:12.5px">되는 시간 칸을 누르세요. 다시 누르면 꺼져요.</p>
       <div class="tbar-wrap"><div class="tbar" id="dmHours"></div></div>
-      <label class="fld" style="margin-top:12px"><span>사유 · 메모 (선택)</span>
-        <input type="text" id="dmInput" maxlength="200" placeholder="예: 8시 넘어야 가능"></label>
-      <div class="row" style="justify-content:flex-end;margin:8px 0 14px">
-        <button class="btn primary" id="dmSave" type="button">저장하고 닫기</button>
+      <label class="fld" style="margin-top:12px"><span>메모 (선택) · 다른 사람에게 보입니다</span>
+        <input type="text" id="dmInput" maxlength="200" placeholder="예: 21시 넘어야 도착해요"></label>
+      <div class="dmfoot">
+        <button class="btn" id="dmCancel" type="button">취소</button>
+        <button class="btn primary" id="dmSave" type="button">저장</button>
       </div>
     </div>
     <div id="dmOthers"></div>
-    <div class="dm-hap" id="dmFixRow">
-      <span id="dmFixNow"></span>
-      <button class="btn" id="dmFix" type="button">📌 이 날로 정하기</button>
-    </div>
     <details class="dm-set" id="dmSet">
-      <summary>⚙ 이 날 설정 — 시간대 바꾸기 · 후보에서 빼기</summary>
+      <summary>⚙ 이 날 설정 — 시간대 · 확정 · 후보에서 빼기</summary>
       <div class="dm-admin">
         <span class="hint" style="margin:0">이 날 시간</span>
         <span id="dmWin"></span>
         <span style="flex:1"></span>
         <button class="btn ghost danger" id="dmDrop" type="button">후보에서 빼기</button>
+      </div>
+      <div class="dm-hap" id="dmFixRow">
+        <span id="dmFixNow"></span>
+        <button class="btn" id="dmFix" type="button">📌 이 날로 정하기</button>
       </div>
     </details>
   </div>
@@ -778,19 +825,20 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 <div class="modal" id="heatModal" hidden>
   <div class="sheet tall" role="dialog" aria-modal="true">
     <div class="spread">
-      <h2 style="margin:0">결과</h2>
-      <button class="btn ghost" type="button" data-close>닫기</button>
+      <h2 style="margin:0">언제가 제일 좋을까</h2>
+      <button class="iconbtn" type="button" data-close aria-label="닫기">✕</button>
     </div>
     <div id="bestCard">
-      <h3 class="subh">추천 시간</h3>
-      <p class="hint">연속 2시간 이상 모두(또는 N명)가 되는 때. <b>정하기</b>를 누르면 그 시간으로 확정됩니다.</p>
+      <h3 class="subh">이런 시간은 어때요?</h3>
+      <p class="hint">연속 2시간 이상 되는 때입니다. <b>선택</b>하면 아래 후보로 담깁니다.</p>
       <div class="row tight" id="threshChips" style="margin-bottom:12px"></div>
       <div class="best" id="best"></div>
     </div>
-    <h3 class="subh" style="margin-top:18px">시간별 인원</h3>
-    <p class="hint" id="heatHint" style="margin:4px 0 0">숫자 = 그 시간에 되는 사람 수. 칸을 누르면 누가 되고 누가 안 되는지 나옵니다.</p>
+    <h3 class="subh" style="margin-top:18px">직접 고르기</h3>
+    <p class="hint" id="heatHint" style="margin:4px 0 0">시작 칸을 누르고, 끝 칸을 한 번 더 누르면 그 구간이 후보가 됩니다. 숫자 = 그 시간에 되는 사람 수.</p>
     <div class="grid-wrap" style="margin-top:12px"><div class="grid" id="heat"></div></div>
     <div id="heatDetail"></div>
+    <div id="picksCard"></div>
   </div>
 </div>
 
@@ -835,11 +883,11 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
   <button class="btn primary" id="saveBtn" type="button" hidden>저장</button>
 </div>
 
-<script>/* 약속 잡기 — benny3s.github.io/meet/
+<script>/* 약속 잡자 — benny3s.github.io/meet/
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21o";
+const BUILD = "2026-09-22a";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1275,11 +1323,11 @@ function showNew(){
   $("#view-meet").hidden = true;
   $("#linkBtn").hidden = false;                      // 첫 화면에서도 주소를 복사할 수 있게 (2026-09-21 Benny)
   $("#saveBtn").hidden = true;
-  /* 제목은 늘 "약속 잡기" — 약속마다 바뀌면 헷갈린다 (2026-09-21 Benny) */
-  $("#h1").textContent = "약속 잡기";
+  /* 제목은 늘 "약속 잡자" — 약속마다 바뀌면 헷갈린다 (2026-09-21 Benny) */
+  $("#h1").textContent = "약속 잡자";
   $("#subtitle").textContent = ad ? "만들어진 약속 전부" : "친구들 되는 날 한 번에 모으기";
-  document.title = "약속 잡기";
-  $("#foot").textContent = "약속 잡기 " + BUILD;
+  document.title = "약속 잡자";
+  $("#foot").textContent = "약속 잡자 " + BUILD;
   if (ad) loadAdmin();
   else if (!pickRows && !pickBusy) setTimeout(() => {
     /* 첫 화면에서는 목록을 미리 받아둔다 (여기선 저장을 기다리게 할 일이 없다) */
@@ -1295,14 +1343,14 @@ function renderAll(){
   $("#linkBtn").hidden = false;
 
   const m = meet();
-  $("#h1").textContent = "약속 잡기";                 // 고정 (2026-09-21 Benny)
+  $("#h1").textContent = "약속 잡자";                 // 고정 (2026-09-21 Benny)
   const bits = [];
   if (m.title) bits.push(m.title);
   if (m.place) bits.push(m.place);
   bits.push(members().length + "명");
   if (dates().length) bits.push("후보 " + dates().length + "일");
   $("#subtitle").textContent = bits.join(" · ");
-  document.title = (m.title || "약속") + " — 약속 잡기";
+  document.title = (m.title || "약속") + " — 약속 잡자";
 
   recentTouch(M, m.title);
   $("#mTitle").textContent = m.title || "약속";
@@ -1318,7 +1366,7 @@ function renderAll(){
   $("#sheetCard").hidden = !has;
   $("#heatOpenBtn").hidden = !has;
   $("#saveBtn").hidden = !(has && me && dirty);
-  $("#foot").textContent = "약속 잡기 " + BUILD + (lastMs ? " · 서버 " + (lastMs/1000).toFixed(1) + "초" : "");
+  $("#foot").textContent = "약속 잡자 " + BUILD + (lastMs ? " · 서버 " + (lastMs/1000).toFixed(1) + "초" : "");
 
   renderWho();
   drawSheet();
@@ -1477,6 +1525,7 @@ function openMember(n){
 
 /* ═══ 그 날 창 ═══ */
 let dmDate = null;
+let dmSnap = null;          // 창을 열었을 때 상태 — [취소] 가 여기로 되돌린다
 function renderDmHours(){
   const box = $("#dmHours"); box.innerHTML = "";
   if (!me || !dmDate) return;
@@ -1486,7 +1535,7 @@ function renderDmHours(){
     const b = document.createElement("button");
     b.type = "button"; b.className = "tb" + (no ? " x" : "") + (i === hs.length - 1 ? " last" : "");
     b.dataset.h = h; b.dataset.l = hh(h); b.dataset.e = hh(h + 1);
-    b.textContent = no ? "✗" : "";
+    b.textContent = no ? "✗" : String(h);          // 24시간제 숫자를 칸 안에 (2026-09-22)
     b.setAttribute("aria-label", h + "시");
     b.setAttribute("aria-pressed", String(sel.has(key(d,h))));
     b.onclick = () => {
@@ -1510,13 +1559,14 @@ function roBar(box, d, hrs){
     const b = document.createElement("div");
     b.className = "tb" + (no ? " x" : "") + (i === hs.length - 1 ? " last" : "");
     b.dataset.l = hh(h); b.dataset.e = hh(h + 1);
-    b.textContent = no ? "✗" : "";
+    b.textContent = no ? "✗" : String(h);
     b.setAttribute("aria-pressed", String(!!hrs && hrs.includes(h)));
     box.appendChild(b);
   });
 }
 function openDay(d, who, mode){
   dmDate = d;
+  dmSnap = { on: hoursFor(d).filter(h => sel.has(key(d,h))), no: noneSel.has(d), memo: noteDraft[d] || "" };
   const v = (who && (who !== me || mode === "view")) ? who : null;
   $("#dmTitle").textContent = (v ? v + " · " : "") + fmtFull(d) + " · " + winLabel(d);
   $("#dmInput").value = noteDraft[d] || "";
@@ -1636,6 +1686,54 @@ async function save(){
 }
 
 /* ═══ 결과 ═══ */
+/* ═══ 후보 시간 (2026-09-22 Benny: "선택하면 아래에 하이라이트, 그게 곧 찜")
+   저장 위치: 설정 탭 picks — "YYYY-MM-DD HH:MM~HH:MM" 문자열 목록. 확정(fixed)은 여전히 한 개다. */
+function picks(){ return (ST.picks || []).slice(); }
+function pickTxt(d, from, to){ return d + " " + hh(from) + "~" + hh(to); }
+/** "2026-10-04 19:00~22:00" → {d, from, to} (to 는 끝나는 시각) */
+function pickParse(t){
+  const m = /^(\d{4}-\d{2}-\d{2}) (\d{2}):\d{2}~(\d{2}):\d{2}$/.exec(String(t || ""));
+  return m ? { d: m[1], from: +m[2], to: +m[3] } : null;
+}
+function hasPick(t){ return picks().indexOf(t) >= 0; }
+function savePicks(list, msg){
+  act({ action:"meet_set", picks: JSON.stringify(list) }, msg, () => { ST.picks = list.slice(); });
+}
+function togglePick(t){
+  const list = picks(), i = list.indexOf(t);
+  if (i >= 0){ list.splice(i, 1); savePicks(list, "후보에서 뺐습니다"); }
+  else {
+    if (list.length >= 20){ setStatus("후보는 20개까지예요", "err"); return; }
+    list.push(t); list.sort();
+    savePicks(list, "후보에 담았습니다 — " + fmtPick(t));
+  }
+  renderResult();
+}
+function fmtPick(t){
+  const p = pickParse(t);
+  return p ? fmtFull(p.d) + " " + hh(p.from) + "~" + hh(p.to) : t;
+}
+/** 그 후보 구간에 내내 되는 사람 */
+function pickWho(t){
+  const p = pickParse(t); if (!p) return [];
+  const H = hoursOf(), hs = [];
+  for (let h = p.from; h < p.to; h++) hs.push(h);
+  return responders().filter(n => hs.every(h => ((H[n] || {})[p.d] || []).includes(h)));
+}
+/** 히트맵 칸이 담은 후보 안에 드는지 */
+function inPick(d, h){
+  return picks().some(t => { const p = pickParse(t); return p && p.d === d && h >= p.from && h < p.to; });
+}
+
+/* 직접 고르기 — 시작 칸을 누르고 끝 칸을 한 번 더 */
+let heatSel = null;     // {d, a, b}  (a~b 시, b 포함)
+function heatTap(d, h){
+  if (!heatSel || heatSel.d !== d) heatSel = { d, a: h, b: h };
+  else heatSel = { d, a: Math.min(heatSel.a, h), b: Math.max(heatSel.a, h) };
+  pick = { d, h };
+  renderResult();
+}
+
 function renderResult(){
   const rs = responders(), ds = dates(), hs = allHours();
   const T = (thresh === null || thresh > rs.length) ? (rs.length || 1) : thresh;
@@ -1678,29 +1776,28 @@ function renderResult(){
       el.querySelector(".bs").textContent = b.who.length + "명 내내 가능 · " + b.len + "시간 · " + (b.who.join(", ") || "—");
       const go = document.createElement("button");
       go.type = "button"; go.className = "bgo";
-      const txt = b.d + " " + hh(b.from) + "~" + hh(b.to);
-      const on = (meet() && meet().fixed) === txt;
-      go.textContent = on ? "정해짐" : "정하기";
+      const txt = pickTxt(b.d, b.from, b.to);
+      const on = hasPick(txt);
+      go.textContent = on ? "✓ 선택됨" : "선택";
+      go.setAttribute("aria-pressed", String(on));
       if (on) go.classList.add("on");
-      go.onclick = e => { e.stopPropagation(); setFixed(on ? "" : txt); };
+      go.onclick = e => { e.stopPropagation(); togglePick(txt); };
       el.appendChild(go);
       best.appendChild(el);
     });
   }
 
+  /* 히트맵 — 세로 = 날짜, 가로 = 시간 (2026-09-22 Benny: "세로로 날짜가 보이는게 낫다") */
   const g = $("#heat"); g.innerHTML = "";
-  if (ds.length){
-    g.style.gridTemplateColumns = "46px repeat(" + ds.length + ", minmax(62px, 1fr))";
-    g.appendChild(cell("gc hh corner", "시"));
+  if (ds.length && hs.length){
+    g.style.gridTemplateColumns = "58px repeat(" + hs.length + ", minmax(42px, 1fr))";
+    g.appendChild(cell("gc hh corner", "날짜"));
+    hs.forEach(h => g.appendChild(cell("gc hh", String(h))));
     ds.forEach(d => {
-      const c = cell("gc dh" + (dObj(d).getDay() === 0 ? " sun" : ""), "");
-      c.innerHTML = '<span>' + fmtD(d) + '</span><span class="dow">' + fmtDow(d) + '</span>' +
-                    '<span class="win">' + winLabel(d) + "</span>";
-      g.appendChild(c);
-    });
-    hs.forEach(h => {
-      g.appendChild(cell("gc hh", String(h)));
-      ds.forEach(d => {
+      const dc = cell("gc dh" + (dObj(d).getDay() === 0 ? " sun" : ""), "");
+      dc.innerHTML = '<span>' + fmtD(d) + '</span><span class="dow">' + fmtDow(d) + "</span>";
+      g.appendChild(dc);
+      hs.forEach(h => {
         let c;
         if (!hoursFor(d).includes(h)){ g.appendChild(cell("gc hcell off", "")); return; }
         if (focusName){
@@ -1712,24 +1809,80 @@ function renderResult(){
           if (n && rs.length) c.style.background = "rgba(var(--accent-rgb)," + (0.12 + 0.72 * (n / rs.length)).toFixed(3) + ")";
           if (n >= T && n > 0) c.classList.add("full");
         }
-        if (pick && pick.d === d && pick.h === h) c.classList.add("pick");
-        c.onclick = () => { pick = { d, h }; renderResult(); };
+        if (inPick(d, h)) c.classList.add("inpick");
+        if (heatSel && heatSel.d === d && h >= heatSel.a && h <= heatSel.b) c.classList.add("pick");
+        c.onclick = () => heatTap(d, h);
         g.appendChild(c);
       });
     });
   }
 
+  /* 고른 칸 안내 + 후보로 담기 */
   const det = $("#heatDetail"); det.innerHTML = "";
-  if (pick){
-    const ok = availAt(pick.d, pick.h);
-    const no = members().filter(n => !ok.includes(n));
+  if (heatSel){
+    const txt = pickTxt(heatSel.d, heatSel.a, heatSel.b + 1);
+    const who = pickWho(txt);
     const box = document.createElement("div"); box.className = "pickbox";
-    const t = document.createElement("b"); t.textContent = fmtFull(pick.d) + " " + hh(pick.h);
-    const l1 = document.createElement("div"); l1.textContent = "가능 " + ok.length + "명 — " + (ok.join(", ") || "없음");
+    const t = document.createElement("b"); t.textContent = fmtPick(txt);
+    const l1 = document.createElement("div");
+    l1.textContent = (heatSel.b - heatSel.a + 1) + "시간 · 내내 되는 사람 " + who.length + "명" +
+                     (who.length ? " — " + who.join(", ") : "");
     const l2 = document.createElement("div"); l2.className = "muted";
-    l2.textContent = "안 됨 — " + (no.join(", ") || "없음");
-    box.append(t, l1, l2); det.appendChild(box);
+    l2.textContent = heatSel.a === heatSel.b ? "끝나는 칸을 한 번 더 누르면 구간이 됩니다." : "";
+    const row = document.createElement("div"); row.className = "row";
+    const add = document.createElement("button");
+    add.type = "button"; add.className = "btn primary sm";
+    add.textContent = hasPick(txt) ? "✓ 이미 담김" : "＋ 후보로 담기";
+    add.disabled = hasPick(txt);
+    add.onclick = () => togglePick(txt);
+    const clr = document.createElement("button");
+    clr.type = "button"; clr.className = "btn ghost sm"; clr.textContent = "다시 고르기";
+    clr.onclick = () => { heatSel = null; renderResult(); };
+    row.append(add, clr);
+    box.append(t, l1, l2, row); det.appendChild(box);
   }
+
+  renderPicks();
+}
+
+function renderPicks(){
+  const box = $("#picksCard"); box.innerHTML = "";
+  const list = picks();
+  if (!list.length) return;
+  const fx = (meet() && meet().fixed) || "";
+  const wrap = document.createElement("div"); wrap.className = "picks";
+  const head = document.createElement("div"); head.className = "ph";
+  const b = document.createElement("b"); b.textContent = "담은 후보 " + list.length + "개";
+  const sp = document.createElement("span"); sp.textContent = "친구들에게도 보입니다";
+  head.append(b, sp); wrap.appendChild(head);
+
+  list.forEach(t => {
+    const row = document.createElement("div"); row.className = "prow";
+    const pt = document.createElement("div"); pt.className = "pt";
+    const tt = document.createElement("b"); tt.textContent = fmtPick(t);
+    if (fx === t){ const g = document.createElement("span"); g.className = "badge fixnow"; g.textContent = "정해짐"; tt.appendChild(g); }
+    const who = pickWho(t);
+    const sub = document.createElement("span"); sub.className = "ps";
+    sub.textContent = responders().length
+      ? who.length + " / " + responders().length + "명 내내 가능" + (who.length ? " — " + who.join(", ") : "")
+      : "아직 아무도 안 칠했어요";
+    pt.append(tt, sub);
+    const go = document.createElement("button");
+    go.type = "button"; go.className = "btn" + (fx === t ? "" : " dark");
+    go.textContent = fx === t ? "정한 거 취소" : "📌 정하기";
+    go.onclick = () => setFixed(fx === t ? "" : t);
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "btn x"; x.textContent = "✕";
+    x.setAttribute("aria-label", fmtPick(t) + " 후보에서 빼기");
+    x.onclick = () => togglePick(t);
+    row.append(pt, go, x);
+    wrap.appendChild(row);
+  });
+
+  const note = document.createElement("p"); note.className = "pnote";
+  note.textContent = "여러 개 담아두고, 하나만 📌 정하기를 누르면 그 시간으로 확정됩니다.";
+  wrap.appendChild(note);
+  box.appendChild(wrap);
 }
 function setFixed(v){
   act({ action:"meet_set", fixed: v }, v ? "📌 " + v + " 로 정했습니다" : "정한 거 취소됨",
@@ -1904,7 +2057,7 @@ window.addEventListener("popstate", () => {
 $("#titleBtn").onclick  = goHome;
 $("#linkBtn").onclick   = copyLink;
 $("#saveBtn").onclick   = save;
-$("#heatOpenBtn").onclick = () => openModal("heatModal");
+$("#heatOpenBtn").onclick = () => { heatSel = null; renderResult(); openModal("heatModal"); };
 $("#calOpenBtn").onclick  = () => openModal("calModal");
 $("#mEdit").onclick       = () => openModal("setModal");
 
@@ -1914,6 +2067,23 @@ $("#whoChange").onclick = () => { whoOpen = true; whoAdd = false; renderWho(); }
 $("#whoKeep").onclick   = () => { whoOpen = false; whoAdd = false; renderWho(); };
 
 $("#dmClose").onclick   = closeDay;
+/* 취소 = 이 창을 열었을 때 상태로 되돌리고 닫기 (2026-09-22 Benny) */
+$("#dmCancel").onclick = () => {
+  const d = dmDate;
+  if (d && dmSnap){
+    hoursFor(d).forEach(h => sel.delete(key(d,h)));
+    dmSnap.on.forEach(h => sel.add(key(d,h)));
+    if (dmSnap.no) noneSel.add(d); else noneSel.delete(d);
+    if (dmSnap.memo) noteDraft[d] = dmSnap.memo; else delete noteDraft[d];
+    drawSheet();
+  }
+  closeDay();
+};
+$("#dmSetBtn").onclick = () => {
+  const dt = $("#dmSet");
+  dt.open = !dt.open;
+  if (dt.open) dt.scrollIntoView({ behavior:"smooth", block:"nearest" });
+};
 $("#dmMineBtn").onclick = () => { if (!me){ askName(); return; } const d = dmDate; if (d) openDay(d); };
 /** 이름 없이 칠하려 할 때 — 창을 닫고 '누구세요' 를 펼친다 */
 function askName(){
