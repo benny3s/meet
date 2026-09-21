@@ -499,6 +499,16 @@ h2 .cnt{color:var(--muted);font-weight:500;font-size:13px;margin-left:4px}
 .chip.add{border-style:dashed;color:var(--accent);font-weight:600}
 .chip.add[aria-pressed="true"]{background:var(--bg);color:var(--accent);border-color:var(--accent)}
 html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
+/* 약속 선택 */
+.pk{display:flex;align-items:flex-start;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)}
+.pk:last-child{border-bottom:0}
+.pk .go{appearance:none;border:0;background:transparent;font:inherit;color:inherit;text-align:left;
+  cursor:pointer;flex:1 1 auto;min-width:0;padding:2px 0;min-height:42px}
+.pk .t{font-weight:700;font-size:14.5px;letter-spacing:-.02em}
+.pk .t .badge{margin-left:6px}
+.pk .s{display:block;color:var(--muted);font-size:12px;margin-top:2px;overflow-wrap:anywhere}
+.pk.on .t{color:var(--accent)}
+header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 /* 관리 화면 */
 .ad{margin-top:12px}
 .ad .ttl{font-weight:700;font-size:15px;letter-spacing:-.02em}
@@ -526,6 +536,7 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
   <span class="hact">
     <button class="iconbtn" id="linkBtn" type="button" title="링크 복사" hidden>🔗</button>
     <button class="iconbtn" id="reloadBtn" type="button" title="새로고침">↻</button>
+    <button class="btn" id="pickBtn" type="button">약속 선택 ▾</button>
   </span>
 </header>
 
@@ -559,7 +570,6 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
     </div>
     <p class="hint">이 기기에서 열었던 약속이에요.</p>
     <div class="list" id="recentList"></div>
-    <p class="hint" style="margin:10px 0 0">주소 끝에 <b>?admin</b> 을 붙이면 전체 약속 관리 화면이 나옵니다.</p>
   </div>
 </section>
 
@@ -633,6 +643,20 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
 </section>
 
 <footer id="foot"></footer>
+</div>
+
+<!-- ══════════ 약속 선택 ══════════ -->
+<div class="modal" id="pickModal" hidden>
+  <div class="sheet tall" role="dialog" aria-modal="true">
+    <div class="spread">
+      <h2 style="margin:0">약속 선택</h2>
+      <button class="btn ghost" type="button" data-close>닫기</button>
+    </div>
+    <button class="btn primary" id="pickNew" type="button" style="width:100%;margin-top:12px">＋ 새 약속 만들기</button>
+    <input type="search" id="pickQ" placeholder="이름·장소·사람으로 찾기" style="width:100%;margin-top:12px">
+    <p class="hint" id="pickHint" style="margin:8px 0 0"></p>
+    <div class="list" id="pickList" style="margin-top:6px"></div>
+  </div>
 </div>
 
 <!-- ══════════ 그 날 창 ══════════ -->
@@ -788,7 +812,7 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21f";
+const BUILD = "2026-09-21g";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1022,6 +1046,94 @@ function renderAdmin(){
     acts.appendChild(del);
     card.appendChild(acts);
     box.appendChild(card);
+  });
+}
+
+/* ═══ 약속 선택 (헤더 버튼) ═══
+   누구나 전체 목록을 보고 고른다. 이름이 유일해야 찾을 수 있어서 서버가 중복을 막는다. */
+let pickRows = null, pickLoading = false;
+async function openPick(force){
+  openModal("pickModal");
+  $("#pickQ").value = "";
+  if (pickRows && !force){ renderPick(); return; }
+  pickLoading = true; renderPick();
+  try {
+    const r = await api({ action:"meet_all" });
+    pickRows = r.meets || [];
+  } catch(e){
+    pickRows = null;
+    setStatus("목록 불러오기 실패 — " + e.message, "err");
+  }
+  pickLoading = false;
+  renderPick();
+}
+function pickHay(m){
+  return [m.title, m.place, m.memo, (m.members || []).join(" "), m.owner].join(" ").toLowerCase();
+}
+function renderPick(){
+  const box = $("#pickList"), hint = $("#pickHint");
+  box.innerHTML = "";
+  if (pickLoading){ hint.textContent = "불러오는 중…"; return; }
+  if (!pickRows){ hint.textContent = "목록을 불러오지 못했습니다. 닫았다 다시 열어주세요."; return; }
+
+  const q = $("#pickQ").value.trim().toLowerCase();
+  const list = pickRows
+    .filter(m => !q || pickHay(m).includes(q))
+    .sort((a, b) => {
+      const A = a.edited || "", B = b.edited || "";
+      if (A !== B) return A < B ? 1 : -1;
+      return (a.made || "") < (b.made || "") ? 1 : -1;
+    });
+
+  hint.textContent = q
+    ? list.length + "개 찾음 (전체 " + pickRows.length + "개)"
+    : "전체 " + pickRows.length + "개 · 최근에 바뀐 것부터";
+  if (!list.length){
+    box.innerHTML = '<p class="hint" style="margin:10px 0 0">' +
+      (q ? "찾는 약속이 없어요." : "아직 만들어진 약속이 없습니다.") + "</p>";
+    return;
+  }
+
+  list.forEach(m => {
+    const row = document.createElement("div");
+    row.className = "pk" + (m.id === M ? " on" : "");
+    const go = document.createElement("button"); go.type = "button"; go.className = "go";
+    const t = document.createElement("span"); t.className = "t";
+    t.textContent = (m.title || "(이름 없는 약속)") + (m.id === M ? " · 지금 보는 약속" : "");
+    if (m.fixed){ const b = document.createElement("span"); b.className = "badge fix"; b.textContent = "정해짐"; t.appendChild(b); }
+    else if (m.to && m.to < todayIso()){ const b = document.createElement("span"); b.className = "badge old"; b.textContent = "지난 약속"; t.appendChild(b); }
+    const sub = document.createElement("span"); sub.className = "s";
+    const bits = [];
+    if (m.place) bits.push(m.place);
+    bits.push((m.members || []).length + "명" + (m.members.length ? " (" + m.members.join(", ") + ")" : ""));
+    if (m.dates) bits.push(fmtFull(m.from) + " ~ " + fmtFull(m.to));
+    bits.push(m.edited ? "수정 " + fmtEdit(m.edited) : "아직 안 칠함");
+    sub.textContent = bits.join(" · ");
+    go.append(t, sub);
+    go.onclick = () => {
+      closeModal("pickModal");
+      if (m.id === M){ return; }
+      location.href = location.pathname + "?m=" + encodeURIComponent(m.id);
+    };
+    const del = document.createElement("button");
+    del.className = "btn ghost sm danger"; del.type = "button"; del.textContent = "지우기";
+    del.onclick = async e => {
+      e.stopPropagation();
+      const t2 = m.title || "이 약속";
+      if (!confirm("“" + t2 + "” 을 통째로 지웁니다.\n칠한 시간·메모·참여자까지 전부 사라지고 되돌릴 수 없어요.\n계속할까요?")) return;
+      setStatus("지우는 중…");
+      try {
+        await api({ action:"meet_remove", m: m.id });
+        recentDrop(m.id);
+        pickRows = pickRows.filter(x => x.id !== m.id);
+        adRows = adRows.filter(x => x.id !== m.id);
+        renderPick();
+        setStatus("“" + t2 + "” 지웠습니다", "ok");
+        if (m.id === M){ closeModal("pickModal"); location.href = location.pathname; }
+      } catch(e2){ setStatus("실패 — " + e2.message, "err"); }
+    };
+    row.append(go, del);
+    box.appendChild(row);
   });
 }
 
@@ -1799,6 +1911,9 @@ $("#memberAdd").onclick = () => {
 };
 $("#memberInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#memberAdd").click(); });
 $("#s_copy").onclick = copyLink;
+$("#pickBtn").onclick = () => openPick(false);
+$("#pickNew").onclick = () => { closeModal("pickModal"); if (M) location.href = location.pathname; else { $("#n_title").focus(); } };
+$("#pickQ").addEventListener("input", renderPick);
 $("#adReload").onclick = () => loadAdmin();
 $("#adNew").onclick = e => { e.preventDefault(); location.href = location.pathname; };
 
@@ -1829,11 +1944,11 @@ $("#s_reset").onclick = () => {
 };
 
 $$(".modal [data-close]").forEach(b => b.addEventListener("click", () => b.closest(".modal").hidden = true));
-["calModal","heatModal","setModal"].forEach(id =>
+["calModal","heatModal","setModal","pickModal"].forEach(id =>
   $("#" + id).addEventListener("click", e => { if (e.target.id === id) closeModal(id); }));
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
-  const open = ["dayModal","calModal","heatModal","setModal"].find(id => !$("#" + id).hidden);
+  const open = ["dayModal","calModal","heatModal","setModal","pickModal"].find(id => !$("#" + id).hidden);
   if (open) $("#" + open).hidden = true;
 });
 /* 창이 열려 있으면 뒤 페이지가 같이 스크롤되지 않게 */
@@ -1860,6 +1975,7 @@ $("#n_make").onclick = async () => {
     M = ST.newId || (ST.meet && ST.meet.id) || "";
     if (!M) throw new Error("약속 id 를 받지 못했습니다");
     me = who; localStorage.setItem("meet_name:" + M, who);
+    pickRows = null;                                   // 목록 캐시 버리기
     history.replaceState(null, "", location.pathname + "?m=" + M);
     loadMine(true); renderAll(); snapSave();
     setStatus("만들었어요 ✓ 날짜를 골라주세요", "ok");

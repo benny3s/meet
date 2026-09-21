@@ -1,5 +1,5 @@
 /**
- * 약속 잡기 (meet) — Google Apps Script 웹앱 (v4)
+ * 약속 잡기 (meet) — Google Apps Script 웹앱 (v5)
  *
  * benny3s.github.io/meet/ 의 저장소. 밴드매니저의 '캘린더'만 떼어내 만들었습니다.
  * 약속 하나 = 링크 하나(`?m=<약속id>`). **목록은 절대 내려주지 않습니다** — 링크를 아는 사람만 봅니다.
@@ -341,6 +341,22 @@ function state_(mid) {
   return out;
 }
 
+/** 제목 비교용 열쇠 — 앞뒤 공백·연속 공백·대소문자를 무시한다 (v5, 이름은 유일해야 한다) */
+function titleKey_(s) {
+  return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+/** 같은 이름이 이미 있나? skipId 는 자기 자신(이름 바꿀 때) */
+function titleTaken_(title, skipId) {
+  var k = titleKey_(title);
+  if (!k) return false;
+  var l = rows_('meet');
+  for (var i = 0; i < l.length; i++) {
+    if (skipId && l[i].id === skipId) continue;
+    if (titleKey_(l[i]['제목']) === k) return true;
+  }
+  return false;
+}
+
 /** "a,b,c" → {a:1,b:1,c:1} (최대 50개). 빈 값이면 빈 객체 = 아무것도 안 준다. */
 function idSet_(raw) {
   var ids = splitList_(raw), want = {}, n = 0;
@@ -448,6 +464,7 @@ function act_(action, p) {
   if (action === 'meet_new') {
     var title = String(p.title || '').trim().slice(0, 60);
     if (!title) return { ok: false, error: '약속 이름을 적어주세요' };
+    if (titleTaken_(title, '')) return { ok: false, error: '“' + title + '” 은 이미 있는 이름이에요. 다른 이름으로 해주세요' };
     var id = uid_('m');
     var hs = clampHour_(p.hourStart, CONF_DEFAULT.hourStart);
     var he = clampHour_(p.hourEnd, CONF_DEFAULT.hourEnd);
@@ -466,6 +483,11 @@ function act_(action, p) {
 
   /* ── 약속 고치기 ── */
   if (action === 'meet_set') {
+    if (p.title !== undefined) {
+      var nt = String(p.title).trim();
+      if (!nt) return { ok: false, error: '약속 이름을 적어주세요' };
+      if (titleTaken_(nt, mid)) return { ok: false, error: '“' + nt + '” 은 이미 있는 이름이에요' };
+    }
     list = rows_('meet');
     for (i = 0; i < list.length; i++) {
       if (list[i].id !== mid) continue;
