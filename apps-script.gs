@@ -1,5 +1,5 @@
 /**
- * 약속 잡기 (meet) — Google Apps Script 웹앱 (v2)
+ * 약속 잡기 (meet) — Google Apps Script 웹앱 (v3)
  *
  * benny3s.github.io/meet/ 의 저장소. 밴드매니저의 '캘린더'만 떼어내 만들었습니다.
  * 약속 하나 = 링크 하나(`?m=<약속id>`). **목록은 절대 내려주지 않습니다** — 링크를 아는 사람만 봅니다.
@@ -341,12 +341,72 @@ function state_(mid) {
   return out;
 }
 
+/** 관리 화면용 요약. ids 에 적힌 약속만, 최대 50개. 없는 id 는 그냥 빠진다. */
+function info_(raw) {
+  var out = { ok: true, meets: [] }, i;
+  var ids = splitList_(raw), want = {}, n = 0;
+  for (i = 0; i < ids.length; i++) {
+    var q = String(ids[i]).trim();
+    if (q && !want[q]) { want[q] = 1; if (++n >= 50) break; }
+  }
+  if (!n) return out;
+
+  var got = {}, ml = rows_('meet');
+  for (i = 0; i < ml.length; i++) if (want[ml[i].id]) got[ml[i].id] = ml[i];
+
+  var ds = {}, cs = rows_('conf');
+  for (i = 0; i < cs.length; i++) {
+    if (!got[cs[i]['약속']] || cs[i].key !== 'dates') continue;
+    var list = splitList_(cs[i].value), keep = [], seen = {};
+    for (var j = 0; j < list.length; j++) {
+      var nd = normDate_(list[j]);
+      if (nd && !seen[nd]) { seen[nd] = 1; keep.push(nd); }
+    }
+    keep.sort(); ds[cs[i]['약속']] = keep;
+  }
+
+  var mem = {}, ms = rows_('member');
+  for (i = 0; i < ms.length; i++) {
+    if (!got[ms[i]['약속']] || !ms[i]['이름']) continue;
+    (mem[ms[i]['약속']] = mem[ms[i]['약속']] || []).push(ms[i]['이름']);
+  }
+
+  var ans = {}, rs = rows_('resp');
+  for (i = 0; i < rs.length; i++) {
+    var rb = rs[i]['약속'];
+    if (!got[rb] || !rs[i]['이름']) continue;
+    (ans[rb] = ans[rb] || {})[rs[i]['이름']] = 1;
+  }
+
+  var ed = {}, es = rows_('edit');
+  for (i = 0; i < es.length; i++) {
+    var eb = es[i]['약속'], ev = String(es[i]['시각'] || '');
+    if (!got[eb] || !ev) continue;
+    if (!ed[eb] || ev > ed[eb]) ed[eb] = ev;          // 그 약속에서 가장 최근 수정
+  }
+
+  for (var id in got) {
+    var m = got[id], dl = ds[id] || [], names = mem[id] || [];
+    var a = ans[id] || {}, cnt = 0;
+    for (var nm in a) if (names.indexOf(nm) >= 0) cnt++;
+    out.meets.push({
+      id: id, title: m['제목'], place: m['장소'], memo: m['메모'], fixed: m['확정'],
+      owner: m['만든이'], made: m['만든날'], edited: ed[id] || '',
+      members: names, answered: cnt,
+      dates: dl.length, from: dl[0] || '', to: dl[dl.length - 1] || ''
+    });
+  }
+  return out;
+}
+
 /* ═══════════════ 동작 ═══════════════ */
 
 function handle_(p) {
   var action = p.action || 'load';
   if (p.fresh) { _FRESH = true; cache_().removeAll(keysAll_()); }
   if (action === 'load') { var st = state_(p.m); touchFlush_(); return st; }
+  /* 여러 약속 요약 — **내가 id 를 대준 것만** 돌려준다. 목록을 뒤지는 용도가 아니다 (v3) */
+  if (action === 'meet_info') { var st2 = info_(p.ids); touchFlush_(); return st2; }
 
   var lock = LockService.getScriptLock();
   try {
