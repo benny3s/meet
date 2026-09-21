@@ -494,7 +494,8 @@ table.sheet tfoot th.nm{font-size:11px;color:var(--muted);font-weight:600}
 .list .li{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}
 .list .li:last-child{border-bottom:0}
 .list .li .nm{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chip.done{border-color:var(--accent);color:var(--accent)}
+.chip.add{border-style:dashed;color:var(--accent);font-weight:600}
+.chip.add[aria-pressed="true"]{background:var(--bg);color:var(--accent);border-color:var(--accent)}
 html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
 .hourrow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
 .hourrow select{flex:0 0 96px;min-width:0}
@@ -550,12 +551,14 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
     </div>
     <div id="whoPick">
       <h2>누구세요?</h2>
-      <p class="hint">이름을 적으면 바로 시작합니다. 이미 있는 이름을 누르면 그 사람으로 이어서 칠해요.</p>
+      <p class="hint" id="whoHint"></p>
       <div class="chips" id="whoChips"></div>
-      <div class="row" style="margin-top:10px">
+      <div class="row" id="whoAddRow" style="margin-top:10px" hidden>
         <input type="text" id="whoInput" maxlength="30" placeholder="이름" style="flex:1 1 150px">
         <button class="btn primary" id="whoGo" type="button">시작</button>
-        <button class="btn ghost" id="whoKeep" type="button" hidden>그대로 두기</button>
+      </div>
+      <div class="row" id="whoKeepRow" style="margin-top:10px" hidden>
+        <button class="btn ghost" id="whoKeep" type="button">그대로 두기</button>
       </div>
     </div>
   </div>
@@ -742,7 +745,7 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21a";
+const BUILD = "2026-09-21b";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -974,26 +977,41 @@ function renderAll(){
   drawSheet();
 }
 
+/* 이름 입력칸은 '＋ 새 이름' 을 눌렀을 때만 펼친다 (2026-09-21 Benny) */
+let whoAdd = false;
 function renderWho(){
   const picked = !!me && !whoOpen;
   $("#whoPicked").hidden = !picked;
   $("#whoPick").hidden = picked;
   $("#whoName").textContent = me || "";
-  $("#whoKeep").hidden = !me;
+  $("#whoKeepRow").hidden = !me;
+
+  const mem = members();
   const box = $("#whoChips"); box.innerHTML = "";
-  members().forEach(n => {
+  mem.forEach(n => {
     const b = document.createElement("button");
-    b.className = "chip" + (n === me ? " done" : "");
-    b.type = "button"; b.textContent = n;
+    b.className = "chip";
+    b.type = "button"; b.textContent = n + (n === me ? " (나)" : "");
     b.setAttribute("aria-pressed", String(n === me));
     b.onclick = () => pickMe(n);
     box.appendChild(b);
   });
+  const add = document.createElement("button");
+  add.className = "chip add"; add.type = "button"; add.id = "whoAdd";
+  add.textContent = "＋ 새 이름";
+  add.onclick = () => { whoAdd = !whoAdd; renderWho(); if (whoAdd) $("#whoInput").focus(); };
+  box.appendChild(add);
+
+  const open = whoAdd || !mem.length;          // 아직 아무도 없으면 바로 입력칸
+  $("#whoAddRow").hidden = !open;
+  $("#whoHint").textContent = mem.length
+    ? "내 이름을 누르면 그 이름으로 칠합니다. 없으면 ＋ 새 이름."
+    : "이름을 적으면 바로 시작합니다.";
 }
 function pickMe(n){
   n = String(n || "").trim();
   if (!n) return;
-  me = n; whoOpen = false;
+  me = n; whoOpen = false; whoAdd = false;
   localStorage.setItem("meet_name:" + M, n);
   $("#whoInput").value = "";
   if (!members().includes(n)){
@@ -1518,8 +1536,8 @@ $("#mEdit").onclick       = () => openModal("setModal");
 
 $("#whoGo").onclick    = () => pickMe($("#whoInput").value);
 $("#whoInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#whoGo").click(); });
-$("#whoChange").onclick = () => { whoOpen = true; renderWho(); };
-$("#whoKeep").onclick   = () => { whoOpen = false; renderWho(); };
+$("#whoChange").onclick = () => { whoOpen = true; whoAdd = false; renderWho(); };
+$("#whoKeep").onclick   = () => { whoOpen = false; whoAdd = false; renderWho(); };
 
 $("#dmClose").onclick   = closeDay;
 $("#dmMineBtn").onclick = () => { const d = dmDate; if (d) openDay(d); };
