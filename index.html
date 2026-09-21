@@ -557,9 +557,9 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
       <h2 style="margin:0">내 약속 <span class="cnt" id="recentCnt"></span></h2>
       <button class="btn ghost sm" id="recentClear" type="button">목록 비우기</button>
     </div>
-    <p class="hint">이 기기에서 열었던 약속이에요. 다른 사람·다른 기기에는 안 보입니다.</p>
+    <p class="hint">이 기기에서 열었던 약속이에요.</p>
     <div class="list" id="recentList"></div>
-    <p class="hint" style="margin:10px 0 0">주소 끝에 <b>#admin</b> 을 붙이면 자세한 관리 화면이 나옵니다.</p>
+    <p class="hint" style="margin:10px 0 0">주소 끝에 <b>?admin</b> 을 붙이면 전체 약속 관리 화면이 나옵니다.</p>
   </div>
 </section>
 
@@ -570,17 +570,9 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
       <h2 style="margin:0">약속 관리 <span class="cnt" id="adCnt"></span></h2>
       <button class="btn ghost sm" id="adReload" type="button">새로고침</button>
     </div>
-    <p class="hint">
-      이 기기가 아는 약속만 보여줍니다 (서버에 전체 목록은 없습니다).
-      다른 기기에서 만든 약속은 아래에 링크를 붙여넣어 목록에 더하세요.
-    </p>
-    <div class="row" style="margin-top:10px">
-      <input type="text" id="adAdd" placeholder="약속 링크 붙여넣기" style="flex:1 1 200px">
-      <button class="btn" id="adAddGo" type="button">목록에 더하기</button>
-    </div>
-    <div class="row" style="justify-content:space-between;margin-top:12px">
+    <p class="hint">만들어진 약속 전부입니다. 마지막 수정이 최근인 것부터 — 아래로 갈수록 오래된 것.</p>
+    <div class="row" style="margin-top:12px">
       <a class="btn ghost" id="adNew" href="#">＋ 새 약속</a>
-      <button class="btn ghost danger" id="adClear" type="button">목록 비우기</button>
     </div>
   </div>
   <div id="adList"></div>
@@ -796,7 +788,7 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21d";
+const BUILD = "2026-09-21e";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -952,21 +944,17 @@ function renderRecent(){
    ⚠️ #admin 은 서버에 전달되지 않는다(해시). 그래서 "전체 목록"을 서버가 내려주게 만들면
    엔드포인트만 아는 사람도 다 받아갈 수 있다 → **이 기기가 아는 id 만** 서버에 물어본다.
    서버 meet_info 는 준 id 에 해당하는 것만 돌려준다. 새로 새는 정보가 없다. */
-/* 열쇠 없이 주소 끝에 #admin 만 붙이면 관리 화면 (2026-09-21 Benny) */
-function isAdmin(){ return (location.hash || "").toLowerCase() === "#admin"; }
+/* 주소 끝에 ?admin 만 붙이면 관리 화면 (2026-09-21 Benny: "?admin 보통 이렇게 하니")
+   # 뒤는 서버로 안 가고 ? 뒤는 간다 → 전체 목록을 받아오려면 ? 가 맞다 */
+function isAdmin(){ return new URLSearchParams(location.search).has("admin"); }
+function adminUrl(){ return location.origin + location.pathname + "?admin"; }
 let adRows = [];
 async function loadAdmin(){
-  const l = recentGet();
-  $("#adCnt").textContent = l.length ? l.length + "개" : "";
   const box = $("#adList");
-  if (!l.length){
-    box.innerHTML = '<div class="card"><p class="hint" style="margin:0">아직 이 기기가 아는 약속이 없습니다. 위에 링크를 붙여넣거나 새로 만들어 주세요.</p></div>';
-    return;
-  }
   box.innerHTML = '<div class="card"><p class="hint" style="margin:0">불러오는 중…</p></div>';
-  setStatus("약속 " + l.length + "개 확인 중…");
+  setStatus("약속 목록 불러오는 중…");
   try {
-    const r = await api({ action:"meet_info", ids: l.map(x => x.id).join(",") });
+    const r = await api({ action:"meet_all" });
     adRows = r.meets || [];
     setStatus("최신 상태", "ok");
   } catch(e){
@@ -976,28 +964,26 @@ async function loadAdmin(){
   renderAdmin();
 }
 function renderAdmin(){
-  const l = recentGet(), box = $("#adList");
-  const by = {}; adRows.forEach(m => by[m.id] = m);
-  /* 마지막 수정이 최근인 것부터. 없으면 이 기기에서 마지막으로 연 순서 */
-  const order = l.slice().sort((a, b) => {
-    const A = (by[a.id] || {}).edited || "", B = (by[b.id] || {}).edited || "";
+  const box = $("#adList");
+  const seen = {}; recentGet().forEach(x => { if (x) seen[x.id] = x.at; });
+  /* 마지막 수정이 최근인 것부터 → 아래로 갈수록 오래된 것(정리 후보) */
+  const order = adRows.slice().sort((a, b) => {
+    const A = a.edited || "", B = b.edited || "";
     if (A !== B) return A < B ? 1 : -1;
-    return (b.at || 0) - (a.at || 0);
+    return (a.made || "") < (b.made || "") ? 1 : -1;
   });
   box.innerHTML = "";
-  $("#adCnt").textContent = l.length ? l.length + "개" : "";
-  order.forEach(row => {
-    const m = by[row.id];
-    const card = document.createElement("div"); card.className = "card ad" + (m ? "" : " gone");
+  $("#adCnt").textContent = order.length ? order.length + "개" : "0개";
+  if (!order.length){
+    box.innerHTML = '<div class="card"><p class="hint" style="margin:0">아직 만들어진 약속이 없습니다.</p></div>';
+    return;
+  }
+  order.forEach(m => {
+    const card = document.createElement("div"); card.className = "card ad";
     const h = document.createElement("div"); h.className = "ttl";
-    h.textContent = m ? (m.title || "(이름 없는 약속)") : (row.title || "(이름 없는 약속)");
-    if (!m){
-      const b = document.createElement("span"); b.className = "badge old"; b.textContent = "없어진 약속";
-      h.appendChild(b);
-    } else {
-      if (m.fixed){ const b = document.createElement("span"); b.className = "badge fix"; b.textContent = "정해짐"; h.appendChild(b); }
-      if (m.to && m.to < todayIso()){ const b = document.createElement("span"); b.className = "badge old"; b.textContent = "지난 약속"; h.appendChild(b); }
-    }
+    h.textContent = m.title || "(이름 없는 약속)";
+    if (m.fixed){ const b = document.createElement("span"); b.className = "badge fix"; b.textContent = "정해짐"; h.appendChild(b); }
+    if (m.to && m.to < todayIso()){ const b = document.createElement("span"); b.className = "badge old"; b.textContent = "지난 약속"; h.appendChild(b); }
     card.appendChild(h);
 
     const dl = document.createElement("dl");
@@ -1005,57 +991,38 @@ function renderAdmin(){
       const dt = document.createElement("dt"); dt.textContent = k;
       const dd = document.createElement("dd"); dd.textContent = v;
       dl.append(dt, dd); };
-    if (m){
-      add("마지막 수정", m.edited ? fmtEdit(m.edited) : "아직 아무도 안 칠함");
-      add("참여자", m.members.length ? m.members.join(", ") + " (" + m.answered + "/" + m.members.length + "명 응답)" : "없음");
-      add("후보 날짜", m.dates ? m.dates + "일 · " + fmtFull(m.from) + " ~ " + fmtFull(m.to) : "아직 없음");
-      add("정해진 시간", m.fixed ? fmtFixed(m.fixed) : "");
-      add("장소", m.place);
-      add("메모", m.memo);
-      add("만든 사람", (m.owner || "?") + " · " + (m.made || "?"));
-    } else {
-      add("상태", "서버에 없습니다 (이미 지워졌거나 잘못된 링크)");
-    }
-    add("이 기기에서 연 날", agoText(row.at));
+    add("마지막 수정", m.edited ? fmtEdit(m.edited) : "아직 아무도 안 칠함");
+    add("참여자", m.members.length ? m.members.join(", ") + " (" + m.answered + "/" + m.members.length + "명 응답)" : "없음");
+    add("후보 날짜", m.dates ? m.dates + "일 · " + fmtFull(m.from) + " ~ " + fmtFull(m.to) : "아직 없음");
+    add("정해진 시간", m.fixed ? fmtFixed(m.fixed) : "");
+    add("장소", m.place);
+    add("메모", m.memo);
+    add("만든 사람", (m.owner || "?") + " · " + (m.made || "?"));
+    if (seen[m.id]) add("내가 연 날", agoText(seen[m.id]));
     card.appendChild(dl);
 
     const acts = document.createElement("div"); acts.className = "acts";
-    if (m){
-      const open = document.createElement("a"); open.className = "btn ghost"; open.textContent = "열기";
-      open.href = location.pathname + "?m=" + encodeURIComponent(row.id);
-      acts.appendChild(open);
-    }
-    const out = document.createElement("button");
-    out.className = "btn ghost"; out.type = "button"; out.textContent = "목록에서 빼기";
-    out.onclick = () => { recentDrop(row.id); renderAdmin(); };
-    acts.appendChild(out);
-    if (m){
-      const del = document.createElement("button");
-      del.className = "btn ghost danger"; del.type = "button"; del.textContent = "지우기";
-      del.onclick = async () => {
-        const t = m.title || "이 약속";
-        if (!confirm("“" + t + "” 을 통째로 지웁니다.\n칠한 시간·메모·참여자까지 전부 사라지고 되돌릴 수 없어요.\n계속할까요?")) return;
-        setStatus("지우는 중…");
-        try {
-          await api({ action:"meet_remove", m: row.id });
-          recentDrop(row.id);
-          adRows = adRows.filter(x => x.id !== row.id);
-          renderAdmin();
-          setStatus("“" + t + "” 지웠습니다", "ok");
-        } catch(e){ setStatus("실패 — " + e.message, "err"); }
-      };
-      acts.appendChild(del);
-    }
+    const open = document.createElement("a"); open.className = "btn ghost"; open.textContent = "열기";
+    open.href = location.pathname + "?m=" + encodeURIComponent(m.id);
+    acts.appendChild(open);
+    const del = document.createElement("button");
+    del.className = "btn ghost danger"; del.type = "button"; del.textContent = "지우기";
+    del.onclick = async () => {
+      const t = m.title || "이 약속";
+      if (!confirm("“" + t + "” 을 통째로 지웁니다.\n칠한 시간·메모·참여자까지 전부 사라지고 되돌릴 수 없어요.\n계속할까요?")) return;
+      setStatus("지우는 중…");
+      try {
+        await api({ action:"meet_remove", m: m.id });
+        recentDrop(m.id);
+        adRows = adRows.filter(x => x.id !== m.id);
+        renderAdmin();
+        setStatus("“" + t + "” 지웠습니다", "ok");
+      } catch(e){ setStatus("실패 — " + e.message, "err"); }
+    };
+    acts.appendChild(del);
     card.appendChild(acts);
     box.appendChild(card);
   });
-}
-/** 붙여넣은 링크에서 약속 id 만 뽑는다 */
-function idFromLink(v){
-  v = String(v || "").trim();
-  if (!v) return "";
-  const m = /[?&]m=([^&#\s]+)/.exec(v);
-  return m ? decodeURIComponent(m[1]) : (/^[A-Za-z0-9_-]{3,40}$/.test(v) ? v : "");
 }
 
 /* ═══ 스냅샷 — 서버를 기다리는 동안 지난 화면을 먼저 ═══ */
@@ -1834,20 +1801,6 @@ $("#memberInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#
 $("#s_copy").onclick = copyLink;
 $("#adReload").onclick = () => loadAdmin();
 $("#adNew").onclick = e => { e.preventDefault(); location.href = location.pathname; };
-$("#adClear").onclick = () => {
-  if (!confirm("이 기기의 목록만 비웁니다. 약속 자체는 그대로 남아요. 계속할까요?")) return;
-  recentPut([]); adRows = []; renderAdmin();
-  setStatus("목록을 비웠습니다", "ok");
-};
-$("#adAddGo").onclick = () => {
-  const id = idFromLink($("#adAdd").value);
-  if (!id){ setStatus("약속 링크를 붙여넣어 주세요", "err"); return; }
-  $("#adAdd").value = "";
-  recentTouch(id, "");
-  loadAdmin();
-};
-$("#adAdd").addEventListener("keydown", e => { if (e.key === "Enter") $("#adAddGo").click(); });
-window.addEventListener("hashchange", () => { if (!M) showNew(); });
 
 $("#recentClear").onclick = () => {
   if (!confirm("이 기기의 '내 약속' 목록만 비웁니다. 약속 자체는 그대로 남아요. 계속할까요?")) return;

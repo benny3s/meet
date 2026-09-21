@@ -1,5 +1,5 @@
 /**
- * 약속 잡기 (meet) — Google Apps Script 웹앱 (v3)
+ * 약속 잡기 (meet) — Google Apps Script 웹앱 (v4)
  *
  * benny3s.github.io/meet/ 의 저장소. 밴드매니저의 '캘린더'만 떼어내 만들었습니다.
  * 약속 하나 = 링크 하나(`?m=<약속id>`). **목록은 절대 내려주지 않습니다** — 링크를 아는 사람만 봅니다.
@@ -341,18 +341,25 @@ function state_(mid) {
   return out;
 }
 
-/** 관리 화면용 요약. ids 에 적힌 약속만, 최대 50개. 없는 id 는 그냥 빠진다. */
-function info_(raw) {
-  var out = { ok: true, meets: [] }, i;
+/** "a,b,c" → {a:1,b:1,c:1} (최대 50개). 빈 값이면 빈 객체 = 아무것도 안 준다. */
+function idSet_(raw) {
   var ids = splitList_(raw), want = {}, n = 0;
-  for (i = 0; i < ids.length; i++) {
+  for (var i = 0; i < ids.length; i++) {
     var q = String(ids[i]).trim();
     if (q && !want[q]) { want[q] = 1; if (++n >= 50) break; }
   }
-  if (!n) return out;
+  return want;
+}
 
-  var got = {}, ml = rows_('meet');
-  for (i = 0; i < ml.length; i++) if (want[ml[i].id]) got[ml[i].id] = ml[i];
+/** 관리 화면용 요약. want 가 객체면 그 id 만, null 이면 전부. */
+function summ_(want) {
+  var out = { ok: true, meets: [] }, i;
+  var got = {}, ml = rows_('meet'), any = false;
+  for (i = 0; i < ml.length; i++) {
+    if (want && !want[ml[i].id]) continue;
+    got[ml[i].id] = ml[i]; any = true;
+  }
+  if (!any) return out;
 
   var ds = {}, cs = rows_('conf');
   for (i = 0; i < cs.length; i++) {
@@ -405,8 +412,11 @@ function handle_(p) {
   var action = p.action || 'load';
   if (p.fresh) { _FRESH = true; cache_().removeAll(keysAll_()); }
   if (action === 'load') { var st = state_(p.m); touchFlush_(); return st; }
-  /* 여러 약속 요약 — **내가 id 를 대준 것만** 돌려준다. 목록을 뒤지는 용도가 아니다 (v3) */
-  if (action === 'meet_info') { var st2 = info_(p.ids); touchFlush_(); return st2; }
+  /* 관리 화면용 요약 (v3~v4).
+     meet_info = 준 id 만 / meet_all = 전부 (2026-09-21 Benny: "그냥 다 보여줘, 어차피 아무도 안 쓸 거야")
+     ⚠️ meet_all 은 이 엔드포인트를 아는 사람이면 누구나 부를 수 있다. 제목·참여자 이름·날짜가 보인다. */
+  if (action === 'meet_info') { var st2 = summ_(idSet_(p.ids)); touchFlush_(); return st2; }
+  if (action === 'meet_all')  { var st3 = summ_(null);          touchFlush_(); return st3; }
 
   var lock = LockService.getScriptLock();
   try {
