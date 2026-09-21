@@ -788,7 +788,7 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21e";
+const BUILD = "2026-09-21f";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1115,7 +1115,7 @@ function showNew(){
   $("#linkBtn").hidden = true;
   $("#saveBtn").hidden = true;
   $("#h1").textContent = ad ? "약속 관리" : "약속 잡기";
-  $("#subtitle").textContent = ad ? "이 기기가 아는 약속들" : "친구들 되는 날 한 번에 모으기";
+  $("#subtitle").textContent = ad ? "만들어진 약속 전부" : "친구들 되는 날 한 번에 모으기";
   $("#foot").textContent = "약속 잡기 " + BUILD;
   if (ad) loadAdmin();
 }
