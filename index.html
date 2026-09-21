@@ -464,8 +464,6 @@ table.sum tbody tr:hover td.go{color:var(--accent);opacity:1}
 [hidden]{display:none !important}
 .wholine{display:flex;align-items:center;gap:8px;min-width:0;font-size:14.5px}
 .wholine .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);flex:0 0 auto}
-.wholine .dot.none{background:transparent;border:1px solid var(--muted)}
-#whoNone .wholine{color:var(--muted);font-size:13.5px}
 .fixedline{margin:10px 0 0;color:var(--accent);font-weight:700;font-size:14px}
 /* 이름 밑 '최근 수정' */
 table.sheet .nmbtn .sub,table.sheet th.corner .sub{display:block;font-weight:500;font-size:10px;
@@ -592,13 +590,6 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
       <div class="spread">
         <span class="wholine"><span class="dot"></span><b id="whoName"></b> 님으로 칠하는 중</span>
         <button class="btn ghost sm" id="whoChange" type="button">바꾸기</button>
-      </div>
-    </div>
-    <!-- 이름을 아직 안 골랐을 때도 한 줄만 (2026-09-21 Benny: "누구세요 디폴트로 할 필요 없을 것 같아") -->
-    <div id="whoNone" hidden>
-      <div class="spread">
-        <span class="wholine"><span class="dot none"></span>보는 중 — 칠하려면 이름이 필요해요</span>
-        <button class="btn ghost sm" id="whoStart" type="button">이름 고르기</button>
       </div>
     </div>
     <div id="whoPick">
@@ -818,7 +809,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21i";
+const BUILD = "2026-09-21j";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1037,21 +1028,51 @@ function renderAdmin(){
 
 /* ═══ 약속 선택 (헤더 버튼) ═══
    누구나 전체 목록을 보고 고른다. 이름이 유일해야 찾을 수 있어서 서버가 중복을 막는다. */
-let pickRows = null, pickLoading = false;
-async function openPick(force){
-  openModal("pickModal");
-  $("#pickQ").value = "";
-  if (pickRows && !force){ renderPick(); return; }
-  pickLoading = true; renderPick();
+let pickRows = null, pickLoading = false, pickBusy = false;
+/* 목록도 스냅샷 먼저 — 서버 왕복이 1.5~4초라 그동안 빈 화면이었다 (2026-09-21 Benny: "너무 오래걸려") */
+const LIST_KEY = "meet_list_snap", LIST_TTL = 24 * 3600 * 1000;
+function listSnapLoad(){
+  try {
+    const c = JSON.parse(localStorage.getItem(LIST_KEY) || "null");
+    if (!c || !Array.isArray(c.meets)) return null;
+    if (Date.now() - (c.t || 0) > LIST_TTL) return null;
+    return c.meets;
+  } catch(e){ return null; }
+}
+function listSnapSave(rows){
+  try { localStorage.setItem(LIST_KEY, JSON.stringify({ t: Date.now(), meets: rows })); } catch(e){}
+}
+/** 서버에서 목록을 받아 캐시까지 갱신. 화면은 건드리지 않는다 */
+async function fetchList(){
+  if (pickBusy) return pickRows;
+  pickBusy = true;
   try {
     const r = await api({ action:"meet_all" });
     pickRows = r.meets || [];
-  } catch(e){
-    pickRows = null;
-    setStatus("목록 불러오기 실패 — " + e.message, "err");
-  }
-  pickLoading = false;
+    listSnapSave(pickRows);
+    return pickRows;
+  } finally { pickBusy = false; }
+}
+async function openPick(force){
+  openModal("pickModal");
+  $("#pickQ").value = "";
+  if (!pickRows) pickRows = listSnapLoad();          // 저장해 둔 목록을 즉시 그린다
+  pickLoading = !pickRows;
   renderPick();
+  if (pickRows && !force) refreshList();             // 뒤에서 조용히 최신으로
+  else {
+    try { await fetchList(); }
+    catch(e){ setStatus("목록 불러오기 실패 — " + e.message, "err"); }
+    pickLoading = false;
+    renderPick();
+  }
+}
+/** 창이 열려 있는 동안 뒤에서 갱신 — 다 받으면 다시 그린다 */
+async function refreshList(){
+  try {
+    await fetchList();
+    if (!$("#pickModal").hidden) renderPick();
+  } catch(e){}
 }
 function renderPick(){
   const box = $("#pickList"), hint = $("#pickHint");
@@ -1155,8 +1176,9 @@ async function load(fresh){
   try {
     ST = await api(fresh ? { action:"load", m:M, fresh:1 } : { action:"load", m:M });
     if (ST.gone){ setStatus("없는 약속이에요 — 링크를 확인해주세요", "err"); showNew(); return; }
-    const want = localStorage.getItem("meet_name:" + M) || "";
-    if (!dirty && !saving) me = members().includes(want) ? want : (members().includes(me) ? me : "");
+    /* 이름은 기억하지 않는다 — 약속을 옮기면 '누구세요' 에서 다시 고른다.
+       (이 페이지에서 이미 고른 이름은 그대로 두고, 명단에서 사라졌으면 비운다) */
+    if (!dirty && !saving && me && !members().includes(me)) me = "";
     /* ⚠️ force 를 주면 안 된다 — 저장 안 된 내 입력을 서버 값이 덮어쓴다 */
     loadMine(); renderAll(); snapSave();
     setStatus("최신 상태", "ok");
@@ -1177,6 +1199,10 @@ function showNew(){
   $("#subtitle").textContent = ad ? "만들어진 약속 전부" : "친구들 되는 날 한 번에 모으기";
   $("#foot").textContent = "약속 잡기 " + BUILD;
   if (ad) loadAdmin();
+  else if (!pickRows && !pickBusy) setTimeout(() => {
+    /* 첫 화면에서는 목록을 미리 받아둔다 (여기선 저장을 기다리게 할 일이 없다) */
+    fetchList().then(() => { if (!$("#pickModal").hidden) renderPick(); }).catch(() => {});
+  }, 600);
 }
 
 function renderAll(){
@@ -1218,12 +1244,10 @@ function renderAll(){
 /* 이름 입력칸은 '＋ 새 이름' 을 눌렀을 때만 펼친다 (2026-09-21 Benny) */
 let whoAdd = false;
 function renderWho(){
-  /* 이름이 없어도 '누구세요' 카드를 펼치지 않는다 — 한 줄만 두고 칠할 때 고른다 (2026-09-21 Benny) */
+  /* 약속을 옮기면 이름은 늘 다시 고른다 (2026-09-21 Benny) → 이름이 없으면 '누구세요' 를 펼친다 */
   const picked = !!me && !whoOpen;
-  const none   = !me && !whoOpen;
   $("#whoPicked").hidden = !picked;
-  $("#whoNone").hidden   = !none;
-  $("#whoPick").hidden   = picked || none;
+  $("#whoPick").hidden   = picked;
   $("#whoName").textContent = me || "";
   $("#whoKeepRow").hidden = !me;
 
@@ -1255,7 +1279,6 @@ function pickMe(n){
   n = String(n || "").trim();
   if (!n) return;
   me = n; whoOpen = false; whoAdd = false;
-  localStorage.setItem("meet_name:" + M, n);
   try { localStorage.setItem("meet_lastname", n); } catch(e){}
   $("#whoInput").value = "";
   if (!members().includes(n)){
@@ -1749,7 +1772,7 @@ function renderSet(){
         ST.members = ST.members.map(x => x === n ? to : x);
         ["hours","notes"].forEach(k => { if (ST[k] && ST[k][n]){ ST[k][to] = ST[k][n]; delete ST[k][n]; } });
         if (ST.edited && ST.edited[n]){ ST.edited[to] = ST.edited[n]; delete ST.edited[n]; }
-        if (me === n){ me = to; localStorage.setItem("meet_name:" + M, to); }
+        if (me === n){ me = to; }
       });
     };
     const rm = document.createElement("button"); rm.className = "btn ghost sm danger"; rm.textContent = "빼기";
@@ -1758,7 +1781,7 @@ function renderSet(){
       act({ action:"member_remove", name:n }, n + " 님 뺐습니다", () => {
         ST.members = ST.members.filter(x => x !== n);
         ["hours","notes","edited"].forEach(k => { if (ST[k]) delete ST[k][n]; });
-        if (me === n){ me = ""; localStorage.removeItem("meet_name:" + M); }
+        if (me === n){ me = ""; }
       });
     };
     row.append(nm, sp, rn, rm); box.appendChild(row);
@@ -1794,7 +1817,6 @@ function askName(){
   setTimeout(() => { if (!$("#whoAddRow").hidden) $("#whoInput").focus(); }, 300);
 }
 $("#dmName").onclick = askName;
-$("#whoStart").onclick = () => { whoOpen = true; renderWho(); };
 $("#dayModal").addEventListener("click", e => { if (e.target.id === "dayModal") closeDay(); });
 $("#dmInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#dmSave").click(); });
 $("#dmClear").onclick = () => {
@@ -1932,8 +1954,8 @@ $("#n_make").onclick = async () => {
     ST = await api({ action:"meet_new", title, who, place:$("#n_place").value.trim(), hourStart:a, hourEnd:b });
     M = ST.newId || (ST.meet && ST.meet.id) || "";
     if (!M) throw new Error("약속 id 를 받지 못했습니다");
-    me = who; localStorage.setItem("meet_name:" + M, who);
-    pickRows = null;                                   // 목록 캐시 버리기
+    me = who;
+    pickRows = null; try { localStorage.removeItem(LIST_KEY); } catch(e){}   // 목록 캐시 버리기
     history.replaceState(null, "", location.pathname + "?m=" + M);
     loadMine(true); renderAll(); snapSave();
     setStatus("만들었어요 ✓ 날짜를 골라주세요", "ok");
@@ -1947,7 +1969,6 @@ window.addEventListener("beforeunload", e => { if (dirty){ e.preventDefault(); e
 
 /* ═══ 시작 ═══ */
 if (M && snapLoad()){
-  me = localStorage.getItem("meet_name:" + M) || "";
   loadMine(true); renderAll();
   setStatus("최신 확인 중…");
 } else {
