@@ -531,12 +531,12 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 <div class="wrap">
 
 <header>
-  <button class="titlebtn" id="titleBtn" type="button">
+  <button class="titlebtn" id="titleBtn" type="button" title="처음 화면으로">
     <h1 id="h1">약속 잡기</h1>
     <p class="sub" id="subtitle">링크를 받아 들어오면 바로 칠하면 돼요</p>
   </button>
   <span class="hact">
-    <button class="iconbtn" id="linkBtn" type="button" title="링크 복사" hidden>🔗</button>
+    <button class="iconbtn" id="linkBtn" type="button" title="링크 복사">🔗</button>
     <button class="iconbtn" id="reloadBtn" type="button" title="새로고침">↻</button>
     <button class="btn" id="pickBtn" type="button">약속 선택 ▾</button>
   </span>
@@ -809,7 +809,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21j";
+const BUILD = "2026-09-21k";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1193,10 +1193,12 @@ function showNew(){
   $("#view-new").hidden = ad;
   $("#view-admin").hidden = !ad;
   $("#view-meet").hidden = true;
-  $("#linkBtn").hidden = true;
+  $("#linkBtn").hidden = false;                      // 첫 화면에서도 주소를 복사할 수 있게 (2026-09-21 Benny)
   $("#saveBtn").hidden = true;
-  $("#h1").textContent = ad ? "약속 관리" : "약속 잡기";
+  /* 제목은 늘 "약속 잡기" — 약속마다 바뀌면 헷갈린다 (2026-09-21 Benny) */
+  $("#h1").textContent = "약속 잡기";
   $("#subtitle").textContent = ad ? "만들어진 약속 전부" : "친구들 되는 날 한 번에 모으기";
+  document.title = "약속 잡기";
   $("#foot").textContent = "약속 잡기 " + BUILD;
   if (ad) loadAdmin();
   else if (!pickRows && !pickBusy) setTimeout(() => {
@@ -1213,8 +1215,9 @@ function renderAll(){
   $("#linkBtn").hidden = false;
 
   const m = meet();
-  $("#h1").textContent = m.title || "약속";
+  $("#h1").textContent = "약속 잡기";                 // 고정 (2026-09-21 Benny)
   const bits = [];
+  if (m.title) bits.push(m.title);
   if (m.place) bits.push(m.place);
   bits.push(members().length + "명");
   if (dates().length) bits.push("후보 " + dates().length + "일");
@@ -1787,16 +1790,38 @@ function renderSet(){
     row.append(nm, sp, rn, rm); box.appendChild(row);
   });
 }
-function shareUrl(){ return location.origin + location.pathname + "?m=" + M; }
+function shareUrl(){
+  const base = location.origin + location.pathname;
+  if (M) return base + "?m=" + M;                    // 약속 안 → 그 약속 링크
+  return isAdmin() ? base + "?admin" : base;         // 첫 화면 → 사이트 주소
+}
 async function copyLink(){
   const u = shareUrl();
-  try { await navigator.clipboard.writeText(u); setStatus("링크 복사됨 — 친구들에게 보내세요", "ok"); }
+  const msg = M ? "링크 복사됨 — 친구들에게 보내세요" : "주소 복사됨";
+  try { await navigator.clipboard.writeText(u); setStatus(msg, "ok"); }
   catch(e){ prompt("이 주소를 공유하세요", u); }
+}
+
+/* 제목을 누르면 처음 화면(새 약속 만들기)으로 — 되돌아가기 (2026-09-21 Benny) */
+function goHome(){
+  if (!M && !isAdmin()){ load(true); return; }       // 이미 처음 화면이면 새로고침
+  if (dirty && !confirm("저장하지 않은 표시가 있습니다. 그래도 나갈까요?")) return;
+  M = ""; ST = { meet:null };
+  me = ""; whoOpen = false; whoAdd = false; dirty = false;
+  try { history.pushState(null, "", location.pathname); } catch(e){}
+  showNew();
+  setStatus("");
 }
 
 /* ═══ 이벤트 ═══ */
 $("#reloadBtn").onclick = () => load(true);
-$("#titleBtn").onclick  = () => load(true);
+window.addEventListener("popstate", () => {
+  const nm = new URLSearchParams(location.search).get("m") || "";
+  if (nm === M) return;
+  M = nm; ST = { meet:null }; me = ""; whoOpen = false; whoAdd = false; dirty = false;
+  if (M){ snapLoad(); renderAll(); load(); } else showNew();
+});
+$("#titleBtn").onclick  = goHome;
 $("#linkBtn").onclick   = copyLink;
 $("#saveBtn").onclick   = save;
 $("#heatOpenBtn").onclick = () => openModal("heatModal");
