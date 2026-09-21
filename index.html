@@ -831,7 +831,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21m";
+const BUILD = "2026-09-21n";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1018,8 +1018,10 @@ async function adRemove(ids, label){
       try {
         await api({ action:"meet_remove_many", ids: part.join(",") });
       } catch(e){
-        /* 서버가 아직 옛 버전(v5)이면 한 번에 지우기를 모른다 → 하나씩이라도 지운다 */
-        if (!/unknown action/i.test(e.message || "")) throw e;
+        /* 서버가 아직 옛 버전(v5)이면 한 번에 지우기를 모른다 → 하나씩이라도 지운다.
+           ⚠️ v5 는 'unknown action' 이 아니라 **'없는 약속입니다'** 를 돌려준다
+              (m 이 비어 있어서 '이 약속이 있나' 검사에 먼저 걸린다). 둘 다 옛 서버로 본다. */
+        if (!/unknown action|없는 약속/i.test(e.message || "")) throw e;
         for (const one of part) await api({ action:"meet_remove", m: one });
       }
     }
