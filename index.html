@@ -499,15 +499,17 @@ h2 .cnt{color:var(--muted);font-weight:500;font-size:13px;margin-left:4px}
 .chip.add{border-style:dashed;color:var(--accent);font-weight:600}
 .chip.add[aria-pressed="true"]{background:var(--bg);color:var(--accent);border-color:var(--accent)}
 html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
-/* 약속 선택 */
-.pk{display:flex;align-items:flex-start;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)}
-.pk:last-child{border-bottom:0}
-.pk .go{appearance:none;border:0;background:transparent;font:inherit;color:inherit;text-align:left;
-  cursor:pointer;flex:1 1 auto;min-width:0;padding:2px 0;min-height:42px}
-.pk .t{font-weight:700;font-size:14.5px;letter-spacing:-.02em}
-.pk .t .badge{margin-left:6px}
-.pk .s{display:block;color:var(--muted);font-size:12px;margin-top:2px;overflow-wrap:anywhere}
-.pk.on .t{color:var(--accent)}
+/* 약속 선택 — 이름만, 가나다순 */
+input.bigq{width:100%;margin-top:14px;font-size:16px;padding:13px 15px;border-radius:12px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:52px}
+input.bigq:focus{outline:none;border-color:var(--accent)}
+.pk1{display:block;width:100%;appearance:none;border:0;border-bottom:1px solid var(--line);
+  background:transparent;font:inherit;font-size:15.5px;font-weight:600;color:inherit;text-align:left;
+  cursor:pointer;padding:15px 2px;min-height:54px;letter-spacing:-.02em}
+.pk1:last-child{border-bottom:0}
+.pk1:active{background:var(--soft)}
+.pk1.on{color:var(--accent)}
+.pk1.on::after{content:" ·  지금 보는 약속";font-weight:500;font-size:12.5px;color:var(--muted)}
 header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 /* 관리 화면 */
 .ad{margin-top:12px}
@@ -562,15 +564,6 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
     </div>
   </div>
 
-  <!-- 이 기기에서 열었던 약속들 (서버에는 목록이 없다) -->
-  <div class="card" id="recentCard" hidden>
-    <div class="spread">
-      <h2 style="margin:0">내 약속 <span class="cnt" id="recentCnt"></span></h2>
-      <button class="btn ghost sm" id="recentClear" type="button">목록 비우기</button>
-    </div>
-    <p class="hint">이 기기에서 열었던 약속이에요.</p>
-    <div class="list" id="recentList"></div>
-  </div>
 </section>
 
 <!-- ══════════ 관리 (#admin) — 이 기기가 아는 약속만 ══════════ -->
@@ -653,7 +646,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
       <button class="btn ghost" type="button" data-close>닫기</button>
     </div>
     <button class="btn primary" id="pickNew" type="button" style="width:100%;margin-top:12px">＋ 새 약속 만들기</button>
-    <input type="search" id="pickQ" placeholder="이름·장소·사람으로 찾기" style="width:100%;margin-top:12px">
+    <input type="search" id="pickQ" class="bigq" placeholder="약속 이름 찾기">
     <p class="hint" id="pickHint" style="margin:8px 0 0"></p>
     <div class="list" id="pickList" style="margin-top:6px"></div>
   </div>
@@ -812,7 +805,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-21g";
+const BUILD = "2026-09-21h";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -943,26 +936,6 @@ function agoText(t){
   const o = new Date(t);
   return (o.getMonth()+1) + "/" + o.getDate();
 }
-function renderRecent(){
-  const l = recentGet();
-  $("#recentCard").hidden = !l.length;
-  $("#recentCnt").textContent = l.length ? l.length + "개" : "";
-  const box = $("#recentList"); box.innerHTML = "";
-  l.forEach(x => {
-    const row = document.createElement("div"); row.className = "li";
-    const go = document.createElement("button"); go.type = "button"; go.className = "open";
-    go.textContent = x.title || "(이름 없는 약속)";
-    const sub = document.createElement("span"); sub.className = "sub2";
-    sub.textContent = "마지막으로 연 날 " + agoText(x.at);
-    go.appendChild(sub);
-    go.onclick = () => { location.href = location.pathname + "?m=" + encodeURIComponent(x.id); };
-    const rm = document.createElement("button");
-    rm.className = "btn ghost sm"; rm.type = "button"; rm.textContent = "목록에서 빼기";
-    rm.title = "약속 자체는 지워지지 않습니다";
-    rm.onclick = () => { recentDrop(x.id); renderRecent(); };
-    row.append(go, rm); box.appendChild(row);
-  });
-}
 
 /* ═══ 관리 화면 (#admin) ═══
    ⚠️ #admin 은 서버에 전달되지 않는다(해시). 그래서 "전체 목록"을 서버가 내려주게 만들면
@@ -1067,27 +1040,19 @@ async function openPick(force){
   pickLoading = false;
   renderPick();
 }
-function pickHay(m){
-  return [m.title, m.place, m.memo, (m.members || []).join(" "), m.owner].join(" ").toLowerCase();
-}
 function renderPick(){
   const box = $("#pickList"), hint = $("#pickHint");
   box.innerHTML = "";
   if (pickLoading){ hint.textContent = "불러오는 중…"; return; }
   if (!pickRows){ hint.textContent = "목록을 불러오지 못했습니다. 닫았다 다시 열어주세요."; return; }
 
+  /* 이름만, 가나다순 (2026-09-21 Benny: "심플하게 약속 이름만") */
   const q = $("#pickQ").value.trim().toLowerCase();
   const list = pickRows
-    .filter(m => !q || pickHay(m).includes(q))
-    .sort((a, b) => {
-      const A = a.edited || "", B = b.edited || "";
-      if (A !== B) return A < B ? 1 : -1;
-      return (a.made || "") < (b.made || "") ? 1 : -1;
-    });
+    .filter(m => !q || String(m.title || "").toLowerCase().includes(q))
+    .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "ko"));
 
-  hint.textContent = q
-    ? list.length + "개 찾음 (전체 " + pickRows.length + "개)"
-    : "전체 " + pickRows.length + "개 · 최근에 바뀐 것부터";
+  hint.textContent = q ? list.length + "개 찾음" : "전체 " + pickRows.length + "개";
   if (!list.length){
     box.innerHTML = '<p class="hint" style="margin:10px 0 0">' +
       (q ? "찾는 약속이 없어요." : "아직 만들어진 약속이 없습니다.") + "</p>";
@@ -1095,45 +1060,15 @@ function renderPick(){
   }
 
   list.forEach(m => {
-    const row = document.createElement("div");
-    row.className = "pk" + (m.id === M ? " on" : "");
-    const go = document.createElement("button"); go.type = "button"; go.className = "go";
-    const t = document.createElement("span"); t.className = "t";
-    t.textContent = (m.title || "(이름 없는 약속)") + (m.id === M ? " · 지금 보는 약속" : "");
-    if (m.fixed){ const b = document.createElement("span"); b.className = "badge fix"; b.textContent = "정해짐"; t.appendChild(b); }
-    else if (m.to && m.to < todayIso()){ const b = document.createElement("span"); b.className = "badge old"; b.textContent = "지난 약속"; t.appendChild(b); }
-    const sub = document.createElement("span"); sub.className = "s";
-    const bits = [];
-    if (m.place) bits.push(m.place);
-    bits.push((m.members || []).length + "명" + (m.members.length ? " (" + m.members.join(", ") + ")" : ""));
-    if (m.dates) bits.push(fmtFull(m.from) + " ~ " + fmtFull(m.to));
-    bits.push(m.edited ? "수정 " + fmtEdit(m.edited) : "아직 안 칠함");
-    sub.textContent = bits.join(" · ");
-    go.append(t, sub);
+    const go = document.createElement("button");
+    go.type = "button"; go.className = "pk1" + (m.id === M ? " on" : "");
+    go.textContent = m.title || "(이름 없는 약속)";
     go.onclick = () => {
       closeModal("pickModal");
-      if (m.id === M){ return; }
+      if (m.id === M) return;
       location.href = location.pathname + "?m=" + encodeURIComponent(m.id);
     };
-    const del = document.createElement("button");
-    del.className = "btn ghost sm danger"; del.type = "button"; del.textContent = "지우기";
-    del.onclick = async e => {
-      e.stopPropagation();
-      const t2 = m.title || "이 약속";
-      if (!confirm("“" + t2 + "” 을 통째로 지웁니다.\n칠한 시간·메모·참여자까지 전부 사라지고 되돌릴 수 없어요.\n계속할까요?")) return;
-      setStatus("지우는 중…");
-      try {
-        await api({ action:"meet_remove", m: m.id });
-        recentDrop(m.id);
-        pickRows = pickRows.filter(x => x.id !== m.id);
-        adRows = adRows.filter(x => x.id !== m.id);
-        renderPick();
-        setStatus("“" + t2 + "” 지웠습니다", "ok");
-        if (m.id === M){ closeModal("pickModal"); location.href = location.pathname; }
-      } catch(e2){ setStatus("실패 — " + e2.message, "err"); }
-    };
-    row.append(go, del);
-    box.appendChild(row);
+    box.appendChild(go);
   });
 }
 
@@ -1220,7 +1155,6 @@ async function load(fresh){
 /* ═══ 화면 ═══ */
 function showNew(){
   const ad = isAdmin();
-  renderRecent();
   $("#view-new").hidden = ad;
   $("#view-admin").hidden = !ad;
   $("#view-meet").hidden = true;
@@ -1917,11 +1851,6 @@ $("#pickQ").addEventListener("input", renderPick);
 $("#adReload").onclick = () => loadAdmin();
 $("#adNew").onclick = e => { e.preventDefault(); location.href = location.pathname; };
 
-$("#recentClear").onclick = () => {
-  if (!confirm("이 기기의 '내 약속' 목록만 비웁니다. 약속 자체는 그대로 남아요. 계속할까요?")) return;
-  recentPut([]); renderRecent();
-  setStatus("목록을 비웠습니다", "ok");
-};
 /* 약속을 통째로 지운다 — 링크를 아는 사람은 누구나 지울 수 있으니 확인을 두 번 거친다 */
 $("#s_delete").onclick = async () => {
   const t = (meet() && meet().title) || "이 약속";
