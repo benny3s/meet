@@ -204,24 +204,30 @@ table.sheet td.on .hr,table.sheet td.on .mm{color:var(--on-accent);opacity:1}
 #winList .cus{font-size:10.5px;color:var(--accent);font-weight:700}
 
 /* 아래에서 올라오는 창 */
-.modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.38);
-  display:flex;align-items:flex-end;justify-content:center}
+/* 창은 화면 가운데에 뜬다 (2026-09-22i Benny: "하단고정 말고 그냥 띄우면 안돼?")
+   바닥에 붙여 두면 내용이 늘 때마다 창이 위로 밀려서 보던 자리가 사라진다. */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.42);
+  display:flex;align-items:center;justify-content:center;padding:12px}
 .modal[hidden]{display:none}
-.modal .sheet{background:var(--card);width:100%;max-width:560px;border-radius:16px 16px 0 0;
-  padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:82vh;overflow:auto;
-  box-shadow:0 -8px 28px rgba(0,0,0,.18)}
+.modal .sheet{background:var(--card);width:100%;max-width:560px;border-radius:18px;
+  padding:16px;max-height:88vh;max-height:88dvh;overflow:auto;
+  box-shadow:0 12px 40px rgba(0,0,0,.28)}
 .modal#gridModal{z-index:55}
 .modal#heatModal{z-index:58}
 /* 키가 고정된 창 — 내용이 늘어도 창이 안 움직이고 안쪽만 스크롤된다 */
+/* 내용이 늘어나는 창(결과·달력)은 키를 고정한다 — 안쪽만 스크롤되고 창은 안 움직인다 */
 .modal .sheet.fixh{padding:0;overflow:hidden;display:flex;flex-direction:column;
-  height:min(93vh,1000px);height:min(93dvh,1000px);max-height:none}
+  height:min(90vh,1000px);height:min(90dvh,1000px);max-height:none}
 .modal .sheet.fixh .shead{flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;
   gap:10px;padding:15px 16px 12px;border-bottom:1px solid var(--line)}
 .modal .sheet.fixh .shead h2{font-size:17px;font-weight:800;letter-spacing:-.03em}
 .modal .sheet.fixh .shead .hint{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .modal .sheet.fixh .sbody{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;padding:12px 16px calc(18px + env(safe-area-inset-bottom))}
-.modal .sheet.tall{max-height:92vh}
+  overscroll-behavior:contain;padding:12px 16px 16px}
+.modal .sheet.fixh .sfoot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line);
+  background:var(--bg)}
+.modal .sheet.tall{max-height:88vh;max-height:88dvh}
 .subh{font-size:14.5px;font-weight:700;margin:14px 0 2px;letter-spacing:-.02em}
 .foldbtn{appearance:none;border:0;background:transparent;color:var(--muted);font-size:14px;min-width:44px;min-height:44px;
   margin:-8px -8px 0 0;cursor:pointer;flex:0 0 auto}
@@ -414,6 +420,17 @@ ul.plain li .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 footer{color:var(--muted);font-size:11.5px;text-align:center;padding:10px 0 4px}
 /* 만든 사람의 다른 프로젝트로 (2026-09-21 Benny) */
 .btn.wide{width:100%;height:54px;font-size:16px}
+/* 시간 고르기 작은 창 */
+.modal .sheet.hpick{max-width:330px}
+.hgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.hgrid button{appearance:none;font:inherit;font-size:15px;font-weight:700;height:46px;
+  border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);cursor:pointer}
+.hgrid button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);
+  color:var(--on-accent);font-weight:800}
+.hourbtn{appearance:none;font:inherit;font-size:16px;font-weight:700;min-height:48px;padding:0 14px;
+  border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:0 0 92px}
+.hourbtn:active{border-color:var(--accent)}
 /* 지금 보는 약속을 크게 (2026-09-22b Benny: "위에는 그대로라 헷갈림") */
 .eyebrow{margin:0 0 2px;font-size:10.5px;font-weight:800;color:var(--accent);letter-spacing:.02em}
 h2.bigtitle{font-size:22px;font-weight:900;letter-spacing:-.045em;line-height:1.2}
@@ -696,8 +713,9 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 
     <div class="fld"><span>시간대 — 이 사이에서 고릅니다</span>
       <div class="hourrow">
-        <select id="n_hs"></select><span class="hint" style="margin:0">시 ~</span>
-        <select id="n_he"></select><span class="hint" style="margin:0">시</span>
+        <button class="hourbtn" id="n_hs" type="button" data-h="18">18시</button>
+        <span class="hint" style="margin:0">~</span>
+        <button class="hourbtn" id="n_he" type="button" data-h="23">23시</button>
       </div>
     </div>
     <button class="btn primary wide" id="n_make" type="button" style="margin-top:4px">만들기 →</button>
@@ -861,12 +879,15 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 
 <!-- ══════════ 날짜 고르기 ══════════ -->
 <div class="modal" id="calModal" hidden>
-  <div class="sheet tall" role="dialog" aria-modal="true">
-    <div class="spread">
-      <h2 style="margin:0">날짜 고르기</h2>
-      <button class="btn ghost" type="button" data-close>닫기</button>
+  <div class="sheet fixh" role="dialog" aria-modal="true">
+    <div class="shead">
+      <div style="min-width:0">
+        <h2 style="margin:0">날짜 고르기</h2>
+        <p class="hint" style="margin:2px 0 0">눌러서 넣고 빼세요</p>
+      </div>
+      <button class="iconbtn" type="button" data-close aria-label="닫기">✕</button>
     </div>
-    <p class="hint">달력에서 날짜를 눌러 후보에 넣고 빼세요. 바로 저장됩니다.</p>
+    <div class="sbody">
     <div class="calhead">
       <button class="nav" id="calPrev" type="button">‹</button>
       <b class="ym" id="calLabel"></b>
@@ -888,14 +909,29 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
     <div class="chips" id="dateChips" style="margin-top:12px"></div>
     <div class="fld" id="calHourFld" style="margin-top:16px"><span>기본 시간대 — 모든 날짜에 적용</span>
       <div class="hourrow">
-        <select id="c_hs"></select><span class="hint" style="margin:0">시 ~</span>
-        <select id="c_he"></select><span class="hint" style="margin:0">시</span>
+        <button class="hourbtn" id="c_hs" type="button" data-h="18">18시</button>
+        <span class="hint" style="margin:0">~</span>
+        <button class="hourbtn" id="c_he" type="button" data-h="23">23시</button>
       </div>
     </div>
-    <div class="row" style="justify-content:space-between;margin-top:14px">
+    </div>
+    <div class="sfoot">
       <button class="btn ghost danger" id="calClear" type="button">전부 지우기</button>
       <button class="btn primary" type="button" data-close>다 골랐어요</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════ 시간 고르기 (작은 창) ══════════
+     네이티브 select 은 0~24 를 한 줄씩 보여줘서 화면을 다 덮는다 (2026-09-22i Benny) -->
+<div class="modal" id="hourModal" hidden>
+  <div class="sheet hpick" role="dialog" aria-modal="true">
+    <div class="spread" style="margin-bottom:10px">
+      <h2 style="margin:0" id="hpTitle">시각</h2>
+      <button class="iconbtn" type="button" data-close aria-label="닫기">✕</button>
+    </div>
+    <div class="hgrid" id="hpGrid"></div>
+    <p class="hint" style="margin:10px 0 0">바깥을 누르면 그대로 닫힙니다.</p>
   </div>
 </div>
 
@@ -971,7 +1007,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22h";
+const BUILD = "2026-09-22i";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1413,10 +1449,30 @@ function showNew(){
   document.title = "약속 잡자";
   $("#foot").textContent = "약속 잡자 " + BUILD;
   if (ad) loadAdmin();
-  else if (!pickRows && !pickBusy) setTimeout(() => {
-    /* 첫 화면에서는 목록을 미리 받아둔다 (여기선 저장을 기다리게 할 일이 없다) */
-    fetchList().then(() => { if (!$("#pickModal").hidden) renderPick(); }).catch(() => {});
-  }, 600);
+  else {
+    resetNewForm();
+    /* 첫 화면에서는 목록을 미리 받아둔다 → 이름 중복을 바로 알려줄 수 있다 */
+    if (!pickRows && !pickBusy) setTimeout(() => {
+      fetchList().then(() => {
+        if (!$("#pickModal").hidden) renderPick();
+        recheckTitle();                      // 목록이 늦게 와도 다시 검사
+      }).catch(() => {});
+    }, 400);
+  }
+}
+
+/** 첫 화면으로 돌아오면 지난 입력이 남아 있지 않게 (2026-09-22i Benny: "왜 기본 값이 쓰여있지?") */
+function resetNewForm(){
+  if (!$("#n_title")) return;
+  $("#n_title").value = "";
+  $("#n_place").value = "";
+  $("#n_mem").value = "";
+  if (typeof newMem !== "undefined"){ newMem = []; renderNewMem(); }
+  dsel = new Set(); if (typeof renderNewDates === "function") renderNewDates();
+  setHourBtn($("#n_hs"), 0, 23, 18);
+  setHourBtn($("#n_he"), 1, 24, 23);
+  showTitleMsg("");
+  try { $("#n_who").value = localStorage.getItem("meet_lastname") || ""; } catch(e){}
 }
 
 function renderAll(){
@@ -1740,22 +1796,18 @@ function closeDay(fromBack){
   if (!fromBack) popModalState();
 }
 
-function mkHourSel(from, to, val){
-  const s = document.createElement("select");
-  for (let h = from; h <= to; h++){
-    const o = document.createElement("option");
-    o.value = String(h); o.textContent = String(h);
-    if (h === val) o.selected = true;
-    s.appendChild(o);
-  }
-  return s;
+function mkHourBtn(from, to, val){
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "hourbtn";
+  setHourBtn(b, from, to, val);
+  return b;
 }
 function renderDmAdmin(d){
   const box = $("#dmWin"); box.innerHTML = "";
   const [a, b] = winOf(d);
-  const s1 = mkHourSel(0, 23, a), s2 = mkHourSel(1, 24, b);
+  const s1 = mkHourBtn(0, 23, a), s2 = mkHourBtn(1, 24, b);
   const apply = () => {
-    const x = +s1.value, y = +s2.value;
+    const x = hourVal(s1), y = hourVal(s2);
     if (y <= x){ setStatus("끝 시간이 시작보다 늦어야 해요", "err"); return; }
     const w = Object.assign({}, ST.windows || {});
     if (x === ST.hourStart && y === ST.hourEnd) delete w[d]; else w[d] = [x, y];
@@ -1763,10 +1815,10 @@ function renderDmAdmin(d){
         () => { ST.windows = w; });
     renderDmHours();
   };
-  s1.onchange = apply; s2.onchange = apply;
-  const u1 = document.createElement("span"); u1.textContent = "시 ~";
-  const u2 = document.createElement("span"); u2.textContent = "시";
-  box.append(s1, u1, s2, u2);
+  s1.onclick = () => openHourPick(s1, "시작 시각", apply);
+  s2.onclick = () => openHourPick(s2, "끝 시각",  apply);
+  const u = document.createElement("span"); u.className = "hint"; u.style.margin = "0"; u.textContent = "~";
+  box.append(s1, u, s2);
 }
 
 /* ═══ 저장 ═══ */
@@ -2103,7 +2155,7 @@ function popModalState(){
   if (modalNav > 0){ modalNav--; try { history.back(); } catch(e){} }
 }
 function anyModalOpen(){
-  return ["dayModal","calModal","heatModal","setModal","pickModal"].find(id => {
+  return ["hourModal","dayModal","calModal","heatModal","setModal","pickModal"].find(id => {
     const el = $("#" + id); return el && !el.hidden;
   });
 }
@@ -2134,15 +2186,36 @@ function closeModal(id, fromBack){
   if (id === "calModal" && !M) renderNewDates();   // 만들기 전이면 폼의 날짜 칩을 갱신
   if (!fromBack) popModalState();
 }
-function fillHourSel(sel2, from, to, val){
-  sel2.innerHTML = "";
-  for (let h = from; h <= to; h++){
-    const o = document.createElement("option");
-    o.value = String(h); o.textContent = String(h);
-    if (h === val) o.selected = true;
-    sel2.appendChild(o);
-  }
+/** 버튼에 시각을 넣는다 (select 대신) */
+function setHourBtn(el, from, to, val){
+  const v = Math.min(to, Math.max(from, val));
+  el.dataset.h = String(v); el.dataset.from = String(from); el.dataset.to = String(to);
+  el.textContent = v + "시";
 }
+function fillHourSel(el, from, to, val){ setHourBtn(el, from, to, +val); }
+/** 작은 격자 창으로 시각을 고른다 */
+let hpTarget = null, hpDone = null;
+function openHourPick(el, title, onPick){
+  hpTarget = el; hpDone = onPick || null;
+  const from = +el.dataset.from, to = +el.dataset.to, cur = +el.dataset.h;
+  $("#hpTitle").textContent = title || "시각";
+  const g = $("#hpGrid"); g.innerHTML = "";
+  for (let h = from; h <= to; h++){
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = String(h);
+    b.setAttribute("aria-pressed", String(h === cur));
+    b.setAttribute("aria-label", h + "시");
+    b.onclick = () => {
+      setHourBtn(hpTarget, from, to, h);
+      const t = hpTarget, done = hpDone;
+      closeModal("hourModal");
+      if (done) done(h, t);
+    };
+    g.appendChild(b);
+  }
+  openModal("hourModal");
+}
+function hourVal(el){ return +el.dataset.h; }
 
 /* ═══ 약속 수정 창 ═══ */
 function renderSet(){
@@ -2315,13 +2388,15 @@ $("#calClear").onclick = () => {
 };
 const hourApply = () => {
   if (!M) return;                       // 아직 안 만든 약속 — 폼의 시간대를 쓴다
-  const a = +$("#c_hs").value, b = +$("#c_he").value;
+  const a = hourVal($("#c_hs")), b = hourVal($("#c_he"));
   if (b <= a){ setStatus("끝 시간이 시작보다 늦어야 해요", "err"); return; }
   act({ action:"meet_set", hourStart:a, hourEnd:b }, "기본 시간대 " + a + "–" + b + "시",
       () => { ST.hourStart = a; ST.hourEnd = b; });
 };
-$("#c_hs").onchange = hourApply;
-$("#c_he").onchange = hourApply;
+$("#c_hs").onclick = () => openHourPick($("#c_hs"), "시작 시각", hourApply);
+$("#c_he").onclick = () => openHourPick($("#c_he"), "끝 시각",  hourApply);
+$("#n_hs").onclick = () => openHourPick($("#n_hs"), "시작 시각");
+$("#n_he").onclick = () => openHourPick($("#n_he"), "끝 시각");
 
 $("#s_save").onclick = () => {
   const p = { action:"meet_set", title:$("#s_title").value.trim(), place:$("#s_place").value.trim(),
@@ -2386,7 +2461,7 @@ $("#s_reset").onclick = () => {
 };
 
 $$(".modal [data-close]").forEach(b => b.addEventListener("click", () => closeModal(b.closest(".modal").id)));
-["calModal","heatModal","setModal","pickModal"].forEach(id =>
+["calModal","heatModal","setModal","pickModal","hourModal"].forEach(id =>
   $("#" + id).addEventListener("click", e => { if (e.target.id === id) closeModal(id); }));
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
@@ -2434,7 +2509,19 @@ function addNewMem(){
   newMem.push(v); $("#n_mem").value = ""; renderNewMem(); $("#n_mem").focus();
 }
 $("#n_memAdd").onclick = addNewMem;
-$("#n_mem").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); addNewMem(); } });
+/* ⚠️ 한글 조합 중에는 keydown 의 key 가 'Process'/keyCode 229 로 와서 Enter 를 놓친다.
+   keydown·keyup 둘 다 보고 keyCode 13 도 같이 본다 (2026-09-22i Benny: "엔터 치면 바로 들어가게") */
+["keydown","keyup"].forEach(ev =>
+  $("#n_mem").addEventListener(ev, e => {
+    if (e.key === "Enter" || e.keyCode === 13){ e.preventDefault(); addNewMem(); }
+  }));
+/* 쉼표로도 끊어 넣는다 — "가,나,다" 붙여넣기도 된다 */
+$("#n_mem").addEventListener("input", () => {
+  const v = $("#n_mem").value;
+  if (!/[,\n]/.test(v)) return;
+  v.split(/[,\n]/).forEach(x => { $("#n_mem").value = x; addNewMem(); });
+  $("#n_mem").value = "";
+});
 renderNewMem();
 
 /* 후보 날짜 — 만들기 전에도 같은 달력을 쓴다 */
@@ -2474,20 +2561,22 @@ function showTitleMsg(txt, cls){
   el.className = "fldmsg" + (cls ? " " + cls : "");
   $("#n_title").classList.toggle("bad", cls === "bad");
 }
+function recheckTitle(){
+  const t = ($("#n_title") || {}).value;
+  const v = String(t || "").trim();
+  if (!v){ showTitleMsg(""); return; }
+  const hit = takenTitle(v);
+  showTitleMsg(hit ? "“" + v + "” 은 이미 있는 이름이에요" : "쓸 수 있는 이름이에요 ✓",
+               hit ? "bad" : "good");
+}
 let titleTimer = null;
 $("#n_title").addEventListener("input", () => {
   clearTimeout(titleTimer);
-  titleTimer = setTimeout(() => {
-    const t = $("#n_title").value.trim();
-    if (!t){ showTitleMsg(""); return; }
-    const hit = takenTitle(t);
-    showTitleMsg(hit ? "“" + t + "” 은 이미 있는 이름이에요" : "쓸 수 있는 이름이에요 ✓",
-                 hit ? "bad" : "good");
-  }, 250);
+  titleTimer = setTimeout(recheckTitle, 250);
 });
 $("#n_make").onclick = async () => {
   const title = $("#n_title").value.trim(), who = $("#n_who").value.trim();
-  const a = +$("#n_hs").value, b = +$("#n_he").value;
+  const a = hourVal($("#n_hs")), b = hourVal($("#n_he"));
   if (!title){ showTitleMsg("약속 이름을 적어주세요", "bad"); $("#n_title").focus(); return; }
   if (takenTitle(title)){
     showTitleMsg("“" + title + "” 은 이미 있는 이름이에요", "bad");
@@ -2505,19 +2594,29 @@ $("#n_make").onclick = async () => {
     M = ST.newId || (ST.meet && ST.meet.id) || "";
     if (!M) throw new Error("약속 id 를 받지 못했습니다");
     me = who;
-    /* 🛟 서버가 아직 v7 이면 members 를 모른다 → 빠진 사람만 하나씩 넣는다 (2026-09-22g).
-       v8 을 배포하면 한 번에 들어와서 이 우회로는 그냥 안 쓰인다. */
-    const got = ST.members || [];
-    const miss = newMem.filter(n => n !== who && !got.includes(n));
-    for (const n of miss){
-      try { ST = await api({ action:"member_add", m:M, name:n }); } catch(e){}
-    }
+    try { localStorage.setItem("meet_lastname", who); } catch(e){}   // 다음에 이름칸을 채워준다
+    const miss = newMem.filter(n => n !== who && !(ST.members || []).includes(n));
+    /* 목록 캐시는 버리지 말고 새 약속을 끼워 넣는다 — 다음 중복 검사가 바로 된다 */
+    const row = { id:M, title, place:$("#n_place").value.trim(), members:[who].concat(miss),
+                  answered:0, dates:ds.length, from:ds[0] || "", to:ds[ds.length-1] || "",
+                  fixed:"", memo:"", owner:who, made:todayIso(), edited:"" };
+    pickRows = (pickRows || listSnapLoad() || []).filter(x => x.id !== M).concat([row]);
+    listSnapSave(pickRows);
     newMem = []; renderNewMem(); showTitleMsg("");
-    pickRows = null; try { localStorage.removeItem(LIST_KEY); } catch(e){}   // 목록 캐시 버리기
     history.replaceState(null, "", location.pathname + "?m=" + M);
+    /* 화면을 먼저 보여준다 — 남은 멤버는 뒤에서 넣는다 (2026-09-22i Benny: "생성 너무 오래걸려") */
+    if (miss.length) miss.forEach(n => { if (!ST.members.includes(n)) ST.members.push(n); });
     loadMine(true); renderAll(); snapSave();
     if (ds.length){ setStatus("만들었어요 ✓ 링크를 친구들에게 보내세요", "ok"); }
     else { setStatus("만들었어요 ✓ 날짜를 골라주세요", "ok"); openModal("calModal"); }
+    /* 🛟 서버가 아직 v7 이면 members 를 모른다 → 빠진 사람만 뒤에서 하나씩 넣는다.
+       v8 을 배포하면 miss 가 비어서 이 우회로는 그냥 안 쓰인다. */
+    if (miss.length){
+      (async () => {
+        for (const n of miss){ try { await api({ action:"member_add", m:M, name:n }); } catch(e){} }
+        try { ST = await api({ action:"load", m:M }); loadMine(); renderAll(); snapSave(); } catch(e){}
+      })();
+    }
   } catch(e){
     /* 이름 중복 같은 건 칸 바로 아래에 보여준다 */
     if (/이미 있는 이름|이름을 적어/.test(e.message)){
