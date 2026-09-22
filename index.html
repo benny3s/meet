@@ -367,6 +367,15 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
 .cal.cv .d.fixday{box-shadow:inset 0 0 0 2px var(--ink)}
 @media (prefers-reduced-motion:reduce){ .cal.cv .d.s-none{animation:none;opacity:1} }
 
+/* 앱 안 브라우저 안내 막대 */
+.iab{display:flex;flex-direction:column;gap:9px;margin:0 0 12px;padding:13px 14px;border-radius:14px;
+  border:1px solid var(--accent);background:var(--soft)}
+.iab .iabtx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.iab .iabtx b{font-size:14.5px;letter-spacing:-.02em;color:var(--accent)}
+.iab .iabtx span{font-size:12.5px;color:var(--muted);line-height:1.45}
+.iab .iabgo{display:flex;gap:8px;flex-wrap:wrap}
+.iab .iabgo .btn{flex:1 1 auto;min-height:42px}
+
 .datechip{display:inline-flex;align-items:center;gap:6px}
 .datechip .x{opacity:.65;font-size:15px;line-height:1}
 
@@ -719,6 +728,15 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 </head>
 <body>
 <div class="wrap">
+
+<!-- 카톡·인스타 같은 '앱 안 브라우저' 안내 (2026-09-22p Benny: "카카오 브라우저로 들어가니까 로딩이 너무 길어서") -->
+<div class="iab" id="iabBar" hidden>
+  <div class="iabtx"><b id="iabWho">앱 안에서 열렸어요</b><span>여기선 느리고 이름도 기억 못 해요. 기본 브라우저로 열면 훨씬 빨라요.</span></div>
+  <div class="iabgo">
+    <button class="btn primary sm" id="iabOpen" type="button">기본 브라우저로 열기</button>
+    <button class="btn ghost sm" id="iabSkip" type="button">그냥 볼게요</button>
+  </div>
+</div>
 
 <header>
   <button class="titlebtn" id="titleBtn" type="button" title="처음 화면으로">
@@ -1106,7 +1124,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22o";
+const BUILD = "2026-09-22p";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -3014,6 +3032,51 @@ $("#n_make").onclick = async () => {
   $("#" + id).addEventListener("keydown", e => { if (e.key === "Enter") $("#n_make").click(); }));
 
 window.addEventListener("beforeunload", e => { if (dirty){ e.preventDefault(); e.returnValue = ""; } });
+
+/* ═══ 앱 안 브라우저 (카톡·인스타·네이버 …) ═══
+   카톡 브라우저는 캐시·localStorage 를 거의 안 남겨서 열 때마다 서버를 처음부터 기다린다.
+   (2026-09-22p Benny: "카카오 브라우저로 들어가니까 로딩이 너무 길어서")
+   → 기본 브라우저(크롬/사파리)로 넘기는 버튼을 맨 위에 띄운다. 자동으로 튕기지는 않는다. */
+function inAppName(){
+  const u = navigator.userAgent || "";
+  if (/KAKAOTALK/i.test(u))               return "카카오톡";
+  if (/NAVER\(inapp/i.test(u))            return "네이버 앱";
+  if (/Instagram/i.test(u))               return "인스타그램";
+  if (/\bLine\//i.test(u))                return "라인";
+  if (/FBAN|FBAV/i.test(u))               return "페이스북";
+  if (/DaumApps|KAKAOSTORY/i.test(u))     return "다음/카카오스토리";
+  return "";
+}
+/** 밖으로 나가는 주소. 통로가 없으면 "" (그때는 주소를 복사해 준다) */
+function outsideUrl(){
+  const u = location.href, ua = navigator.userAgent || "";
+  if (/KAKAOTALK/i.test(ua))            // 카톡이 주는 공식 통로
+    return "kakaotalk://web/openExternal?url=" + encodeURIComponent(u);
+  if (/Android/i.test(ua))              // 안드로이드는 intent: 로 기본 브라우저를 부른다
+    return "intent://" + u.replace(/^https?:\/\//, "") +
+           "#Intent;scheme=https;action=android.intent.action.VIEW;end";
+  return "";                            // 아이폰의 다른 앱 브라우저는 통로가 없다
+}
+function openOutside(){
+  const t = outsideUrl();
+  if (t){ location.href = t; return; }
+  const u = location.href;
+  try { navigator.clipboard.writeText(u); setStatus("주소를 복사했어요 — 사파리에 붙여넣기 해주세요", "ok"); }
+  catch(e){ prompt("이 주소를 사파리에 붙여넣어 주세요", u); }
+}
+(function initIab(){
+  const who = inAppName();
+  if (!who) return;
+  let skip = ""; try { skip = sessionStorage.getItem("meet_iab_skip") || ""; } catch(e){}
+  if (skip) return;
+  $("#iabWho").textContent = who + " 안에서 열렸어요";
+  $("#iabBar").hidden = false;
+  $("#iabOpen").onclick = openOutside;
+  $("#iabSkip").onclick = () => {
+    $("#iabBar").hidden = true;
+    try { sessionStorage.setItem("meet_iab_skip", "1"); } catch(e){}
+  };
+})();
 
 /* ═══ 시작 ═══ */
 loadView();
