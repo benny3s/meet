@@ -345,6 +345,7 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
 .calnav b{font-size:15px;letter-spacing:-.02em}
 .calnav .navb{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);
   font:inherit;font-size:17px;line-height:1;width:38px;height:38px;border-radius:9px;cursor:pointer}
+.calnav .navb:disabled{opacity:.25;cursor:default}
 /* 달력 뷰의 칸 — 날짜 + 내 상태 기호 */
 .cal.cv{gap:5px}
 .cal.cv .d{padding:7px 0 6px;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:54px;
@@ -1105,7 +1106,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22m";
+const BUILD = "2026-09-22n";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1569,7 +1570,11 @@ function resetNewForm(){
   setHourBtn($("#n_hs"), 0, 23, 18);
   setHourBtn($("#n_he"), 1, 24, 23);
   showTitleMsg("");
-  try { $("#n_who").value = localStorage.getItem("meet_lastname") || ""; } catch(e){}
+  /* ⚠️ '내 이름' 도 비운다. 지난 이름(localStorage meet_lastname)을 미리 넣어 두면
+     새로 만드는 건데 남의 약속 이름이 남아 있는 것처럼 보인다
+     (2026-09-22n Benny: "새로만들기인데 왜 내 이름이 디폴트로 자꾸 들어가있어?")
+     기억한 이름은 '누구세요' 입력칸에서만 쓴다.                                  */
+  $("#n_who").value = "";
 }
 
 function renderAll(){
@@ -1706,10 +1711,11 @@ function markOf(d, hrs, ans, mine){
 
 /* ── 달력 보기 — 내 입력 전용. 가로 스크롤 없이 날짜 감각이 살아난다
       (2026-09-22m Benny: "날짜가 가로로 길어서 보기가 불편한데, 달력 모양으로") ── */
-let sheetView = "cal", cvY = 0, cvM = 0, cvInit = false;
-function loadView(){ try { sheetView = localStorage.getItem("meet_view") || "cal"; } catch(e){ sheetView = "cal"; } }
+let sheetView = "tab", cvY = 0, cvM = 0, cvInit = false;
+/* 기본은 **표**. 달력은 원할 때 고른다 (2026-09-22n Benny) */
+function loadView(){ try { sheetView = localStorage.getItem("meet_view") || "tab"; } catch(e){ sheetView = "tab"; } }
 function setView(v){
-  sheetView = (v === "tab") ? "tab" : "cal";
+  sheetView = (v === "cal") ? "cal" : "tab";
   try { localStorage.setItem("meet_view", sheetView); } catch(e){}
   renderSheetArea();
 }
@@ -1769,6 +1775,19 @@ function renderCalView(){
   ot.hidden = !out.length;
   if (out.length) ot.textContent = "다른 달에 " + out.length + "일 더 있어요 — " +
       out.slice(0, 5).map(fmtD).join(", ") + (out.length > 5 ? " …" : "") + "  (‹ › 로 이동)";
+
+  /* ⚠️ 후보 날짜가 있는 달 **밖으로는 못 넘어간다** — 빈 달을 계속 넘기면 길을 잃는다
+     (2026-09-22n Benny: "입력 범위 밖의 월은 옆으로 못넘어가게") */
+  const r = cvRange();
+  $("#cvPrev").disabled = !r || mIdx(cvY, cvM) <= r.lo;
+  $("#cvNext").disabled = !r || mIdx(cvY, cvM) >= r.hi;
+}
+function mIdx(y, m){ return y * 12 + m; }
+function cvRange(){
+  const ds = dates(); if (!ds.length) return null;
+  let lo = Infinity, hi = -Infinity;
+  ds.forEach(d => { const o = dObj(d), i = mIdx(o.getFullYear(), o.getMonth()); if (i < lo) lo = i; if (i > hi) hi = i; });
+  return { lo, hi };
 }
 
 /* ── 표: 줄 = 사람, 칸 = 날짜 ── */
@@ -2542,8 +2561,10 @@ $("#heatOpenBtn").onclick = () => { heatSel = null; renderResult(); openModal("h
 $("#calOpenBtn").onclick  = () => openModal("calModal");
 $("#segCal").onclick = () => setView("cal");
 $("#segTab").onclick = () => setView("tab");
-$("#cvPrev").onclick = () => { if (--cvM < 0){ cvM = 11; cvY--; } renderCalView(); };
-$("#cvNext").onclick = () => { if (++cvM > 11){ cvM = 0; cvY++; } renderCalView(); };
+$("#cvPrev").onclick = () => { const r = cvRange(); if (r && mIdx(cvY, cvM) <= r.lo) return;
+  if (--cvM < 0){ cvM = 11; cvY--; } renderCalView(); };
+$("#cvNext").onclick = () => { const r = cvRange(); if (r && mIdx(cvY, cvM) >= r.hi) return;
+  if (++cvM > 11){ cvM = 0; cvY++; } renderCalView(); };
 $("#mShare").onclick      = shareLink;
 $("#nShare").onclick      = shareLink;
 $("#mEdit").onclick       = () => openModal("setModal");
@@ -2604,7 +2625,6 @@ function askName(){
   setTimeout(() => { if (!$("#whoAddRow").hidden) $("#whoInput").focus(); }, 300);
 }
 $("#dmName").onclick = askName;
-$("#dayModal").addEventListener("click", e => { if (e.target.id === "dayModal") closeDay(); });
 $("#dmInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#dmSave").click(); });
 $("#dmClear").onclick = () => {
   const d = dmDate; if (!d) return;
@@ -2736,6 +2756,14 @@ $("#s_reset").onclick = () => {
 };
 
 $$(".modal [data-close]").forEach(b => b.addEventListener("click", () => closeModal(b.closest(".modal").id)));
+/* 배경(어두운 곳)을 누르면 **어느 창이든** 닫힌다 — 안 닫히면 갇힌 느낌이 난다
+   (2026-09-22n Benny: "빈 화면 누르는데 팝업이 안나가져, 일부러 막은건가?")
+   전에는 그 날 창에만 이 동작이 있었다. 입력하던 표시는 초안(sel/noteDraft)에 남고
+   아래 '저장' 바가 떠 있으니 닫아도 날아가지 않는다.                              */
+$$(".modal").forEach(m => m.addEventListener("click", e => {
+  if (e.target !== m) return;                       // 내용 안쪽 클릭은 무시
+  if (m.id === "dayModal") closeDay(); else closeModal(m.id);
+}));
 ["calModal","heatModal","setModal","pickModal","hourModal"].forEach(id =>
   $("#" + id).addEventListener("click", e => { if (e.target.id === id) closeModal(id); }));
 document.addEventListener("keydown", e => {
