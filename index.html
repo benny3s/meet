@@ -248,6 +248,13 @@ table.sheet td.on .hr,table.sheet td.on .mm{color:var(--on-accent);opacity:1}
 .tbar .tb.x{background:rgba(180,71,47,.10);border-color:rgba(180,71,47,.22);color:var(--warn);font-size:18px}
 .tbar .tb::before,.tbar .tb.last::after{content:none}
 .dm-state{font-weight:800;font-size:15px}
+/* 그 날 창 가운데 — 내 일정 요약 (2026-09-22e) */
+.dmme{margin:12px 0 4px;padding:13px 14px;border-radius:14px;
+  background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28)}
+.dmme .tbar-wrap{padding:0}
+.dmme .btn.wide{height:50px;font-size:15px}
+#dmOthers .dm-row.you{background:rgba(var(--accent-rgb),.10);border-radius:10px;
+  margin:0 -8px;padding-left:8px;padding-right:8px}
 /* 그 날 창 아래 — 취소 / 저장 (2026-09-22 Benny) */
 .dmfoot{display:flex;gap:9px;margin:14px -16px 0;padding:13px 16px;
   border-top:1px solid var(--line);background:var(--bg)}
@@ -355,6 +362,9 @@ button, .chip, .btn, a.lnk, .cardhead, .menu button { touch-action: manipulation
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:800;
   box-shadow:0 2px 8px rgba(var(--accent-rgb),.25)}
 .btn.dark{background:var(--ink);border-color:var(--ink);color:var(--card);font-weight:800}
+.btn.soft{background:rgba(var(--accent-rgb),.10);border-color:rgba(var(--accent-rgb),.38);
+  color:var(--accent);font-weight:800}
+.btn.soft:active{background:rgba(var(--accent-rgb),.20)}
 .btn.ghost{border:0;background:transparent;color:var(--muted);padding:10px 12px;font-weight:500;font-size:13.5px}
 .btn.danger{color:var(--warn)}
 .btn.sm{font-size:13px;padding:7px 12px}
@@ -425,11 +435,12 @@ table.sheet tr.me td.bestcol{background:rgba(var(--accent-rgb),.16)}
 .steps .step b{font-size:11.5px;font-weight:800;color:var(--accent)}
 .steps .step span{font-size:11.5px;color:var(--muted);line-height:1.35}
 .more{text-align:center;margin:6px 0 4px}
-.more a{display:inline-block;color:var(--muted);font-size:12.5px;line-height:1.2;
-  text-decoration:none;padding:10px 15px;border:1px solid var(--line);border-radius:999px;
-  background:var(--card);transition:color .12s ease,border-color .12s ease}
-.more a:hover{color:var(--accent);border-color:var(--accent)}
-.more a:active{background:var(--soft)}
+.more a{display:inline-block;color:var(--accent);font-size:12.5px;font-weight:700;line-height:1.2;
+  text-decoration:none;padding:10px 15px;border-radius:999px;
+  border:1px solid rgba(var(--accent-rgb),.38);background:rgba(var(--accent-rgb),.10);
+  transition:background .12s ease,border-color .12s ease}
+.more a:hover{border-color:var(--accent)}
+.more a:active{background:rgba(var(--accent-rgb),.22)}
 
 /* ── 곡 / 이력 ── */
 .sec{margin-bottom:18px}
@@ -626,7 +637,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
     <span class="mark" aria-hidden="true">약</span>
     <span class="tt">
       <h1 id="h1">약속 잡자</h1>
-      <p class="sub" id="subtitle">링크를 받아 들어오면 바로 칠하면 돼요</p>
+      <p class="sub" id="subtitle">링크를 받아 들어오면 바로 입력하면 돼요</p>
     </span>
   </button>
   <span class="hact">
@@ -641,11 +652,11 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
   <div class="steps">
     <div class="step"><b>1 만들기</b><span>이름만 적으면 끝</span></div>
     <div class="step"><b>2 보내기</b><span>링크 복사 → 단톡방</span></div>
-    <div class="step"><b>3 칠하기</b><span>각자 되는 시간</span></div>
+    <div class="step"><b>3 입력</b><span>각자 되는 시간</span></div>
   </div>
   <div class="card">
     <h2>새 약속 만들기</h2>
-    <p class="hint">만들고 나온 링크를 친구들에게 보내면 됩니다. 로그인 없이 이름만 적고 칠해요.</p>
+    <p class="hint">만들고 나온 링크를 친구들에게 보내면 됩니다. 로그인 없이 이름만 적고 입력해요.</p>
     <label class="fld"><span>약속 이름</span>
       <input type="text" id="n_title" maxlength="60" placeholder="예: 10월 저녁 모임"></label>
     <label class="fld"><span>내 이름</span>
@@ -694,7 +705,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
   <div class="card" id="whoCard">
     <div id="whoPicked" hidden>
       <div class="spread">
-        <span class="wholine"><span class="dot"></span><b id="whoName"></b> 님으로 칠하는 중</span>
+        <span class="wholine"><span class="dot"></span><b id="whoName"></b> 님으로 입력하는 중</span>
         <button class="btn ghost sm" id="whoChange" type="button">바꾸기</button>
       </div>
     </div>
@@ -725,7 +736,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
     <p class="fixedline" id="mFixed" hidden></p>
     <div class="sheettools">
       <button class="btn primary" id="heatOpenBtn" type="button">결과 보기</button>
-      <button class="btn" id="calOpenBtn" type="button">날짜 고르기</button>
+      <button class="btn soft" id="calOpenBtn" type="button">날짜 고르기</button>
     </div>
   </div>
 
@@ -772,17 +783,21 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
       </span>
     </div>
     <p class="dm-sum" id="dmSum"></p>
-    <div id="dmView" hidden>
-      <div class="dm-state" id="dmViewState"></div>
-      <div class="tbar-wrap"><div class="tbar ro" id="dmViewBar"></div></div>
-      <p class="dm-vmemo" id="dmViewMemo" hidden></p>
-      <button class="btn ghost sm" id="dmMineBtn" type="button" style="padding-left:0;margin:6px 0 10px">내 시간 칠하기 →</button>
+    <!-- 가운데: 내 일정 요약 + 입력 버튼 (2026-09-22e Benny) -->
+    <div id="dmSummary" class="dmme">
+      <div class="spread" style="margin-bottom:6px">
+        <span class="dm-state" id="dmMyState"></span>
+        <span class="hint" id="dmMyEdited" style="margin:0;flex:0 0 auto"></span>
+      </div>
+      <div class="tbar-wrap"><div class="tbar ro" id="dmMyBar"></div></div>
+      <p class="dm-vmemo" id="dmMyMemo" hidden></p>
+      <button class="btn primary wide" id="dmEditBtn" type="button" style="margin-top:12px">✏ 내 시간 입력하기</button>
     </div>
     <div id="dmNoName" hidden>
-      <p class="hint" style="margin:6px 0 10px">이 날 시간을 칠하려면 이름을 먼저 골라주세요.</p>
+      <p class="hint" style="margin:6px 0 10px">이 날 시간을 입력하려면 이름을 먼저 골라주세요.</p>
       <button class="btn primary" id="dmName" type="button" style="margin-bottom:12px">이름 고르기 →</button>
     </div>
-    <div id="dmMine">
+    <div id="dmMine" hidden>
       <div class="spread" style="margin-bottom:4px">
         <span class="dm-state" id="dmState">미정</span>
         <span class="row tight" style="flex:0 0 auto">
@@ -930,7 +945,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22d";
+const BUILD = "2026-09-22e";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1170,7 +1185,7 @@ function renderAdmin(){
       const dt = document.createElement("dt"); dt.textContent = k;
       const dd = document.createElement("dd"); dd.textContent = v;
       dl.append(dt, dd); };
-    add("마지막 수정", m.edited ? fmtEdit(m.edited) : "아직 아무도 안 칠함");
+    add("마지막 수정", m.edited ? fmtEdit(m.edited) : "아직 아무도 입력 안 함");
     add("참여자", m.members.length ? m.members.join(", ") + " (" + m.answered + "/" + m.members.length + "명 응답)" : "없음");
     add("후보 날짜", m.dates ? m.dates + "일 · " + fmtFull(m.from) + " ~ " + fmtFull(m.to) : "아직 없음");
     add("정해진 시간", m.fixed ? fmtFixed(m.fixed) : "");
@@ -1475,7 +1490,7 @@ function drawSheet(){
   if (me){
     hint.append(document.createTextNode("연두색이 "));
     const b1 = document.createElement("b"); b1.textContent = me + " 님 줄";
-    hint.append(b1, document.createTextNode(" 입니다. 그 줄의 칸을 눌러 되는 시간을 칠해주세요."));
+    hint.append(b1, document.createTextNode(" 입니다. 그 줄의 칸을 눌러 되는 시간을 입력해주세요."));
   } else {
     hint.append(document.createTextNode("먼저 위에서 "));
     const b1 = document.createElement("b"); b1.textContent = "이름";
@@ -1531,7 +1546,7 @@ function drawSheet(){
     const et = fmtEdit(ED[n]);
     ed.textContent = et || "–";
     nb.appendChild(ed);
-    nb.title = et ? (n + " · 마지막 수정 " + et) : (n + " · 아직 안 칠함");
+    nb.title = et ? (n + " · 마지막 수정 " + et) : (n + " · 아직 입력 안 함");
     nb.onclick = () => openMember(n);
     th.appendChild(nb); tr.appendChild(th);
 
@@ -1544,12 +1559,12 @@ function drawSheet(){
       const sp = document.createElement("span");
       if (ans && hrs && hrs.length){ sp.className = "hr ok"; sp.textContent = runsOf(hrs, true); }
       else if (ans){ sp.className = "hr no"; sp.textContent = "✗"; }
-      else { sp.className = "hr none"; sp.textContent = mine ? "＋ 칠하기" : "—"; }
+      else { sp.className = "hr none"; sp.textContent = mine ? "＋ 입력" : "—"; }
       if (d === bestD && bestN > 0) td.className = "bestcol";
       b.appendChild(sp);
       if (memo){ const mm = document.createElement("span"); mm.className = "mm"; mm.textContent = memo; b.appendChild(mm); }
       b.title = n + " · " + fmtFull(d);
-      b.onclick = () => openDay(d, n);
+      b.onclick = () => openDay(d, mine ? null : n, mine ? "edit" : "sum");
       td.appendChild(b); tr.appendChild(td);
     });
     tr.appendChild(document.createElement("td")).className = "addcol";
@@ -1584,11 +1599,12 @@ function fmtFixed(f){
 function openMember(n){
   if (n === me){ whoOpen = true; renderWho(); return; }
   const et = fmtEdit(editedOf()[n]);
-  setStatus(n + (et ? " · 마지막 수정 " + et : " · 아직 안 칠함"));
+  setStatus(n + (et ? " · 마지막 수정 " + et : " · 아직 입력 안 함"));
 }
 
 /* ═══ 그 날 창 ═══ */
 let dmDate = null;
+let dmWho  = null;          // 눌러서 들어온 사람 (아래 목록에서 강조)
 let dmSnap = null;          // 창을 열었을 때 상태 — [취소] 가 여기로 되돌린다
 function renderDmHours(){
   const box = $("#dmHours"); box.innerHTML = "";
@@ -1628,32 +1644,41 @@ function roBar(box, d, hrs){
     box.appendChild(b);
   });
 }
+let dmMode = "sum";     // "sum" = 요약 보기 / "edit" = 내 시간 입력
 function openDay(d, who, mode){
+  const fresh = (dmDate !== d) || $("#dayModal").hidden;
   dmDate = d;
-  dmSnap = { on: hoursFor(d).filter(h => sel.has(key(d,h))), no: noneSel.has(d), memo: noteDraft[d] || "" };
-  const v = (who && (who !== me || mode === "view")) ? who : null;
-  $("#dmTitle").textContent = (v ? v + " · " : "") + fmtFull(d) + " · " + winLabel(d);
+  if (fresh) dmSnap = { on: hoursFor(d).filter(h => sel.has(key(d,h))), no: noneSel.has(d), memo: noteDraft[d] || "" };
+  if (mode !== "keep") dmMode = (mode === "edit") ? "edit" : "sum";
+  dmWho = who || null;                        // 눌러서 들어온 사람 — 아래 목록에서 표시해준다
+  $("#dmTitle").textContent = fmtFull(d) + " · " + winLabel(d);
   $("#dmInput").value = noteDraft[d] || "";
-  $("#dmMine").hidden = !me || !!v;
-  $("#dmView").hidden = !v;
-  $("#dmNoName").hidden = !!me || !!v;          // 이름이 없으면 고르러 가는 버튼만
-  if (v){
-    const hrs = (hoursOf()[v] || {})[d], memo = (notesOf()[v] || {})[d];
-    const st = $("#dmViewState");
-    if (Array.isArray(hrs) && hrs.length){ st.textContent = runsOf(hrs) + " 가능"; st.className = "dm-state ok"; }
-    else if (Array.isArray(hrs)){ st.textContent = "이 날 안 돼요"; st.className = "dm-state no"; }
-    else { st.textContent = "아직 안 칠했어요"; st.className = "dm-state u"; }
-    roBar($("#dmViewBar"), d, hrs);
-    $("#dmViewMemo").hidden = !memo;
-    $("#dmViewMemo").textContent = memo ? "“" + memo + "”" : "";
-    $("#dmMineBtn").hidden = false;
-    $("#dmMineBtn").textContent = me ? "내 시간 칠하기 →" : "이름 넣고 칠하기 →";
+
+  const editing = (dmMode === "edit") && !!me;
+  $("#dmMine").hidden    = !editing;
+  $("#dmSummary").hidden = editing || !me;
+  $("#dmNoName").hidden  = !!me;              // 이름이 없으면 고르러 가는 버튼만
+
+  if (!editing && me){
+    const on = myHours(d), no = noneSel.has(d), ans = myAnswered(d);
+    const st = $("#dmMyState");
+    if (ans && on.length){ st.textContent = runsOf(on) + " 가능"; st.className = "dm-state ok"; }
+    else if (no){ st.textContent = "이 날 안 돼요"; st.className = "dm-state no"; }
+    else { st.textContent = "아직 입력 안 했어요"; st.className = "dm-state u"; }
+    const et = fmtEdit(editedOf()[me]);
+    $("#dmMyEdited").textContent = et ? "마지막 수정 " + et : "";
+    roBar($("#dmMyBar"), d, ans ? (no ? [] : on) : undefined);
+    const memo = noteDraft[d] || "";
+    $("#dmMyMemo").hidden = !memo;
+    $("#dmMyMemo").textContent = memo ? "“" + memo + "”" : "";
+    $("#dmEditBtn").textContent = ans ? "✏ 내 시간 수정하기" : "✏ 내 시간 입력하기";
   }
   $("#dmSet").open = false;
   renderDmAdmin(d);
   renderDmHours();
 
   const others = members().filter(n => n !== me);
+  const v = null;
   const H = hoursOf(), N = notesOf();
   const okN = others.filter(n => ((H[n] || {})[d] || []).length).length;
   const ansN = others.filter(n => Array.isArray((H[n] || {})[d])).length;
@@ -1662,14 +1687,14 @@ function openDay(d, who, mode){
     : "아직 나뿐이에요.";
 
   const box = $("#dmOthers"); box.innerHTML = "";
-  others.filter(n => n !== v).sort((a, b) => (!!(N[b]||{})[d]) - (!!(N[a]||{})[d])
+  others.sort((a, b) => (!!(N[b]||{})[d]) - (!!(N[a]||{})[d])
                               || ((H[b]||{})[d]||[]).length - ((H[a]||{})[d]||[]).length)
     .forEach(n => {
       const hrs = (H[n] || {})[d], memo = (N[n] || {})[d];
-      const row = document.createElement("div"); row.className = "dm-row";
+      const row = document.createElement("div"); row.className = "dm-row" + (n === dmWho ? " you" : "");
       const nm = document.createElement("span"); nm.className = "n"; nm.textContent = n;
       const w  = document.createElement("span"); w.className = "w";
-      w.textContent = Array.isArray(hrs) ? (hrs.length ? runsOf(hrs) : "이 날 안 됨") : "아직 안 칠함";
+      w.textContent = Array.isArray(hrs) ? (hrs.length ? runsOf(hrs) : "이 날 안 됨") : "아직 입력 안 함";
       row.append(nm, w);
       if (memo){ const mm = document.createElement("div"); mm.className = "m"; mm.textContent = "“" + memo + "”"; row.appendChild(mm); }
       box.appendChild(row);
@@ -1835,7 +1860,7 @@ function renderResult(){
 
   if (!blocks.length){
     best.innerHTML = '<div class="empty">' +
-      (rs.length ? T + "명 이상 되는 연속 2시간 구간이 없습니다." : "아직 아무도 안 칠했어요.") + "</div>";
+      (rs.length ? T + "명 이상 되는 연속 2시간 구간이 없습니다." : "아직 아무도 입력 안 했어요.") + "</div>";
   } else {
     blocks.slice(0, 8).forEach((b, i) => {
       const el = document.createElement("div");
@@ -1916,7 +1941,7 @@ function renderResult(){
   const sub = $("#resSub");
   if (sub){
     const n = responders().length, tot = members().length;
-    sub.textContent = n ? n + " / " + tot + "명이 칠했어요" : "아직 아무도 안 칠했어요";
+    sub.textContent = n ? n + " / " + tot + "명이 입력했어요" : "아직 아무도 입력 안 했어요";
   }
 }
 
@@ -1940,7 +1965,7 @@ function renderPicks(){
     const sub = document.createElement("span"); sub.className = "ps";
     sub.textContent = responders().length
       ? who.length + " / " + responders().length + "명 내내 가능" + (who.length ? " — " + who.join(", ") : "")
-      : "아직 아무도 안 칠했어요";
+      : "아직 아무도 입력 안 했어요";
     pt.append(tt, sub);
     const go = document.createElement("button");
     go.type = "button"; go.className = "btn" + (fx === t ? "" : " dark");
@@ -2179,15 +2204,18 @@ $("#dmCancel").onclick = () => {
     if (dmSnap.memo) noteDraft[d] = dmSnap.memo; else delete noteDraft[d];
     drawSheet();
   }
-  closeDay();
+  if (d) openDay(d, dmWho, "sum"); else closeDay();   // 되돌리고 요약으로
 };
 $("#dmSetBtn").onclick = () => {
   const dt = $("#dmSet");
   dt.open = !dt.open;
   if (dt.open) dt.scrollIntoView({ behavior:"smooth", block:"nearest" });
 };
-$("#dmMineBtn").onclick = () => { if (!me){ askName(); return; } const d = dmDate; if (d) openDay(d); };
-/** 이름 없이 칠하려 할 때 — 창을 닫고 '누구세요' 를 펼친다 */
+$("#dmEditBtn").onclick = () => {
+  if (!me){ askName(); return; }
+  const d = dmDate; if (d) openDay(d, dmWho, "edit");
+};
+/** 이름 없이 입력하려 할 때 — 창을 닫고 '누구세요' 를 펼친다 */
 function askName(){
   closeDay(); whoOpen = true; whoAdd = false; renderWho();
   $("#whoCard").scrollIntoView({ behavior:"smooth", block:"center" });
@@ -2215,7 +2243,10 @@ $("#dmSave").onclick = () => {
   if (!dmDate || !me) return;
   const v = $("#dmInput").value.trim();
   if ((noteDraft[dmDate] || "") !== v){ v ? (noteDraft[dmDate] = v) : delete noteDraft[dmDate]; dirty = true; }
-  closeDay(); drawSheet(); save();
+  const d = dmDate;
+  drawSheet(); save();
+  dmSnap = { on: hoursFor(d).filter(h => sel.has(key(d,h))), no: noneSel.has(d), memo: noteDraft[d] || "" };
+  openDay(d, dmWho, "sum");                           // 저장하고 요약으로 (창은 그대로)
 };
 $("#dmFix").onclick = () => {
   const d = dmDate; if (!d) return;
