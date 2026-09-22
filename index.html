@@ -11,18 +11,15 @@
   --accent:#0b835b; --accent-rgb:11,131,91; --soft:#eef4f1; --on-accent:#fff;
   --warn:#b4472f; --amber:#8a6d1f; --shadow:0 1px 2px rgba(22,33,28,.045);
 }
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#121614; --card:#1a201d; --line:#2a322d; --ink:#e9efeb; --muted:#93a29a;
-    --accent:#4ec99a; --accent-rgb:78,201,154; --soft:#1f2723; --on-accent:#08241a;
-    --warn:#e08b76; --amber:#d8b75f; --shadow:none;
-  }
-}
+/* 밝은 화면이 기본. 시스템이 다크여도 따라가지 않는다
+   (2026-09-22q Benny: "시스템 설정 따르게 하지 말고, 라이트로 기본")
+   어두운 값은 <html data-theme="dark"> 를 넣을 때만 쓴다 — 아래 한 블록만 남겼다. */
 :root[data-theme="dark"]{
     --bg:#121614; --card:#1a201d; --line:#2a322d; --ink:#e9efeb; --muted:#93a29a;
   --accent:#4ec99a; --accent-rgb:78,201,154; --soft:#1f2723; --on-accent:#08241a;
   --warn:#e08b76; --amber:#d8b75f; --shadow:none;
 }
+:root{color-scheme:light}   /* 브라우저 기본 위젯도 밝게 */
 *{box-sizing:border-box}
 body{
   margin:0; background:var(--bg); color:var(--ink);
@@ -368,13 +365,16 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
 @media (prefers-reduced-motion:reduce){ .cal.cv .d.s-none{animation:none;opacity:1} }
 
 /* 앱 안 브라우저 안내 막대 */
-.iab{display:flex;flex-direction:column;gap:9px;margin:0 0 12px;padding:13px 14px;border-radius:14px;
-  border:1px solid var(--accent);background:var(--soft)}
-.iab .iabtx{display:flex;flex-direction:column;gap:3px;min-width:0}
-.iab .iabtx b{font-size:14.5px;letter-spacing:-.02em;color:var(--accent)}
-.iab .iabtx span{font-size:12.5px;color:var(--muted);line-height:1.45}
-.iab .iabgo{display:flex;gap:8px;flex-wrap:wrap}
-.iab .iabgo .btn{flex:1 1 auto;min-height:42px}
+.iab{display:flex;flex-direction:column;gap:11px;margin:0 0 14px;padding:16px 16px 14px;border-radius:16px;
+  border:2px solid var(--accent);background:var(--accent);color:var(--on-accent);
+  box-shadow:0 6px 18px rgba(var(--accent-rgb),.28)}
+.iab .iabtx{display:flex;flex-direction:column;gap:4px;min-width:0}
+.iab .iabtx b{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--on-accent)}
+.iab .iabtx span{font-size:13px;color:var(--on-accent);opacity:.85;line-height:1.5}
+.iab .iabgo{display:flex;flex-direction:column;gap:7px}
+.iab .iabgo .btn{width:100%;min-height:48px;font-size:15px;font-weight:800}
+.iab .iabgo .btn.primary{background:var(--card);color:var(--accent);border-color:var(--card)}
+.iab .iabgo .btn.ghost{color:var(--on-accent);opacity:.8;min-height:34px;font-size:12.5px;font-weight:600}
 
 .datechip{display:inline-flex;align-items:center;gap:6px}
 .datechip .x{opacity:.65;font-size:15px;line-height:1}
@@ -731,9 +731,9 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 
 <!-- 카톡·인스타 같은 '앱 안 브라우저' 안내 (2026-09-22p Benny: "카카오 브라우저로 들어가니까 로딩이 너무 길어서") -->
 <div class="iab" id="iabBar" hidden>
-  <div class="iabtx"><b id="iabWho">앱 안에서 열렸어요</b><span>여기선 느리고 이름도 기억 못 해요. 기본 브라우저로 열면 훨씬 빨라요.</span></div>
+  <div class="iabtx"><b id="iabWho">앱 안에서 열렸어요</b><span>여기선 많이 느려요. 아래를 누르면 크롬·사파리에서 같은 화면이 바로 열립니다.</span></div>
   <div class="iabgo">
-    <button class="btn primary sm" id="iabOpen" type="button">기본 브라우저로 열기</button>
+    <button class="btn primary sm" id="iabOpen" type="button">👉 크롬 · 사파리로 열기</button>
     <button class="btn ghost sm" id="iabSkip" type="button">그냥 볼게요</button>
   </div>
 </div>
@@ -1124,7 +1124,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22p";
+const BUILD = "2026-09-22q";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
