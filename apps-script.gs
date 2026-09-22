@@ -1,5 +1,5 @@
 /**
- * 약속 잡자 (meet) — Google Apps Script 웹앱 (v7)
+ * 약속 잡자 (meet) — Google Apps Script 웹앱 (v8)
  *
  * benny3s.github.io/meet/ 의 저장소. 밴드매니저의 '캘린더'만 떼어내 만들었습니다.
  * 약속 하나 = 링크 하나(`?m=<약속id>`). **목록은 절대 내려주지 않습니다** — 링크를 아는 사람만 봅니다.
@@ -479,6 +479,11 @@ function act_(action, p) {
     put_('meet', list);
     if (p.dates !== undefined) setConf_(id, 'dates', cleanDates_(p.dates));
     if (p.who) addMember_(id, String(p.who).trim());
+    /* 만들 때 친구들 이름까지 한 번에 (v8) — 한 명씩 member_add 를 부르면 왕복이 늘어난다 */
+    if (p.members !== undefined) {
+      var ms = splitList_(p.members);
+      for (var k = 0; k < ms.length && k < 30; k++) addMember_(id, ms[k]);
+    }
     return { m: id };
   }
 

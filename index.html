@@ -253,6 +253,13 @@ table.sheet td.on .hr,table.sheet td.on .mm{color:var(--on-accent);opacity:1}
   background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28)}
 .dmme .tbar-wrap{padding:0}
 .dmme .btn.wide{height:50px;font-size:15px}
+.dmme .dmwho{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+.dmme .dmwho b{font-size:14px;font-weight:800;letter-spacing:-.02em}
+.dmme .dmwho .hint{margin:0;flex:1 1 auto;text-align:right;font-size:11.5px}
+.dmme .fld>span{font-weight:600}
+.dmme .dmfoot{margin:13px -14px -13px;padding:12px 14px;background:transparent;
+  border-top:1px solid rgba(var(--accent-rgb),.25);border-radius:0 0 13px 13px}
+.dmme input[type=text]{background:var(--card)}
 #dmOthers .dm-row.you{background:rgba(var(--accent-rgb),.10);border-radius:10px;
   margin:0 -8px;padding-left:8px;padding-right:8px}
 /* 그 날 창 아래 — 취소 / 저장 (2026-09-22 Benny) */
@@ -429,6 +436,13 @@ table.sheet tr.me td.bestcol{background:rgba(var(--accent-rgb),.16)}
   background:rgba(var(--accent-rgb),.09);color:var(--ink);font-size:12.5px;line-height:1.5}
 .callout b{color:var(--accent)}
 /* 처음 오는 사람을 위한 1-2-3 (2026-09-22 Benny 시안) */
+/* 칸 바로 아래에 알려주기 (2026-09-22f Benny: "실패 표시가 맨 아래라 안 보인다") */
+.fldmsg{margin:6px 0 0;font-size:12.5px;font-weight:700;line-height:1.4}
+.fldmsg.bad{color:var(--warn)}
+.fldmsg.good{color:var(--accent)}
+.fld input.bad{border-color:var(--warn)}
+.chip.rm{padding-right:9px}
+.chip.rm .x{margin-left:7px;color:var(--muted);font-weight:700}
 .steps{display:flex;gap:6px;margin:0 0 12px}
 .steps .step{flex:1 1 0;min-width:0;background:rgba(var(--accent-rgb),.07);border-radius:12px;
   padding:11px 10px;display:flex;flex-direction:column;gap:3px}
@@ -657,12 +671,29 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
   <div class="card">
     <h2>새 약속 만들기</h2>
     <p class="hint">만들고 나온 링크를 친구들에게 보내면 됩니다. 로그인 없이 이름만 적고 입력해요.</p>
-    <label class="fld"><span>약속 이름</span>
-      <input type="text" id="n_title" maxlength="60" placeholder="예: 10월 저녁 모임"></label>
+    <div class="fld"><span>약속 이름</span>
+      <input type="text" id="n_title" maxlength="60" placeholder="예: 10월 저녁 모임">
+      <p class="fldmsg" id="n_titleMsg" hidden></p>
+    </div>
     <label class="fld"><span>내 이름</span>
       <input type="text" id="n_who" maxlength="30" placeholder="예: 베니"></label>
+
     <label class="fld"><span>장소 (선택)</span>
       <input type="text" id="n_place" maxlength="60" placeholder="예: 합정 / 미정"></label>
+
+    <div class="fld"><span>같이 할 사람 (선택) · 나중에 더 넣을 수 있어요</span>
+      <div class="row nowrap">
+        <input type="text" id="n_mem" maxlength="30" placeholder="이름을 적고 ＋" style="flex:1 1 auto">
+        <button class="btn soft" id="n_memAdd" type="button" style="flex:0 0 auto">＋</button>
+      </div>
+      <div class="chips" id="n_memChips" style="margin-top:9px"></div>
+    </div>
+
+    <div class="fld"><span>후보 날짜 · 지금 골라두면 바로 시작할 수 있어요</span>
+      <button class="btn soft wide" id="n_calBtn" type="button">📅 날짜 고르기</button>
+      <div class="chips" id="n_dateChips" style="margin-top:9px"></div>
+    </div>
+
     <div class="fld"><span>시간대 — 이 사이에서 고릅니다</span>
       <div class="hourrow">
         <select id="n_hs"></select><span class="hint" style="margin:0">시 ~</span>
@@ -783,12 +814,10 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
       </span>
     </div>
     <p class="dm-sum" id="dmSum"></p>
-    <!-- 가운데: 내 일정 요약 + 입력 버튼 (2026-09-22e Benny) -->
+    <!-- 가운데: 내 일정 (요약 / 입력) — 둘 다 같은 연두 박스 (2026-09-22f Benny: "일관성") -->
     <div id="dmSummary" class="dmme">
-      <div class="spread" style="margin-bottom:6px">
-        <span class="dm-state" id="dmMyState"></span>
-        <span class="hint" id="dmMyEdited" style="margin:0;flex:0 0 auto"></span>
-      </div>
+      <div class="dmwho"><b id="dmMyWho"></b><span class="hint" id="dmMyEdited"></span></div>
+      <div class="dm-state" id="dmMyState" style="margin-bottom:8px"></div>
       <div class="tbar-wrap"><div class="tbar ro" id="dmMyBar"></div></div>
       <p class="dm-vmemo" id="dmMyMemo" hidden></p>
       <button class="btn primary wide" id="dmEditBtn" type="button" style="margin-top:12px">✏ 내 시간 입력하기</button>
@@ -797,18 +826,16 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
       <p class="hint" style="margin:6px 0 10px">이 날 시간을 입력하려면 이름을 먼저 골라주세요.</p>
       <button class="btn primary" id="dmName" type="button" style="margin-bottom:12px">이름 고르기 →</button>
     </div>
-    <div id="dmMine" hidden>
-      <div class="spread" style="margin-bottom:4px">
-        <span class="dm-state" id="dmState">미정</span>
-        <span class="row tight" style="flex:0 0 auto">
-          <button class="btn ghost sm" id="dmClear" type="button">비우기</button>
-          <button class="btn ghost sm" id="dmYes" type="button" style="color:var(--accent)">✓ 가능</button>
-          <button class="btn ghost sm danger" id="dmNo" type="button">✗ 불가</button>
-        </span>
-      </div>
-      <p class="hint" style="margin:0;font-size:12.5px">되는 시간 칸을 누르세요. 다시 누르면 꺼져요.</p>
+    <div id="dmMine" class="dmme" hidden>
+      <div class="dmwho"><b id="dmEditWho"></b><span class="hint">입력하는 중</span></div>
+      <div class="dm-state" id="dmState" style="margin-bottom:8px">미정</div>
       <div class="tbar-wrap"><div class="tbar" id="dmHours"></div></div>
-      <label class="fld" style="margin-top:12px"><span>메모 (선택) · 다른 사람에게 보입니다</span>
+      <div class="row tight" style="margin-top:10px">
+        <button class="btn sm" id="dmClear" type="button">비우기</button>
+        <button class="btn sm soft" id="dmYes" type="button">✓ 하루 종일</button>
+        <button class="btn sm" id="dmNo" type="button" style="color:var(--warn)">✗ 이 날 안 돼요</button>
+      </div>
+      <label class="fld" style="margin:12px 0 0"><span>메모 (선택) · 다른 사람에게 보입니다</span>
         <input type="text" id="dmInput" maxlength="200" placeholder="예: 21시 넘어야 도착해요"></label>
       <div class="dmfoot">
         <button class="btn" id="dmCancel" type="button">취소</button>
@@ -872,7 +899,6 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
   </div>
 </div>
 
-<!-- ══════════ 결과 ══════════ -->
 <!-- ══════════ 결과 ══════════
      키가 고정된 창이다 (2026-09-22c Benny: "아래 고정되어서 별로였던거고, 아래로 너무 길어져서 별로").
      내용이 늘어도 창 크기가 그대로라 보던 자리가 안 움직이고, 안쪽만 스크롤된다. -->
@@ -945,7 +971,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22e";
+const BUILD = "2026-09-22f";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1461,7 +1487,7 @@ function renderWho(){
   $("#whoAddRow").hidden = !open;
   if (open && !$("#whoInput").value) $("#whoInput").value = lastName();
   $("#whoHint").textContent = mem.length
-    ? "내 이름을 누르면 그 이름으로 칠합니다. 없으면 ＋ 새 이름."
+    ? "내 이름을 누르면 그 이름으로 입력합니다. 없으면 ＋ 새 이름."
     : "이름을 적으면 바로 시작합니다.";
 }
 function lastName(){ try { return localStorage.getItem("meet_lastname") || ""; } catch(e){ return ""; } }
@@ -1655,6 +1681,7 @@ function openDay(d, who, mode){
   $("#dmInput").value = noteDraft[d] || "";
 
   const editing = (dmMode === "edit") && !!me;
+  if (me) $("#dmEditWho").textContent = me + " (나)";
   $("#dmMine").hidden    = !editing;
   $("#dmSummary").hidden = editing || !me;
   $("#dmNoName").hidden  = !!me;              // 이름이 없으면 고르러 가는 버튼만
@@ -1666,6 +1693,7 @@ function openDay(d, who, mode){
     else if (no){ st.textContent = "이 날 안 돼요"; st.className = "dm-state no"; }
     else { st.textContent = "아직 입력 안 했어요"; st.className = "dm-state u"; }
     const et = fmtEdit(editedOf()[me]);
+    $("#dmMyWho").textContent = me + " (나)";
     $("#dmMyEdited").textContent = et ? "마지막 수정 " + et : "";
     roBar($("#dmMyBar"), d, ans ? (no ? [] : on) : undefined);
     const memo = noteDraft[d] || "";
@@ -2059,6 +2087,7 @@ function dateChanged(){
 async function saveDates(){
   const list = Array.from(dsel).sort();
   dateDirty = false;
+  if (!M){ renderNewDates(); return; }       // 아직 안 만든 약속 — 폼에만 담아둔다 (2026-09-22f)
   await act({ action:"meet_set", dates: list.join(",") }, "날짜 저장됨", () => { ST.dates = list.slice(); });
 }
 
@@ -2082,12 +2111,13 @@ function anyModalOpen(){
 function openModal(id){
   if (id === "heatModal") renderResult();
   if (id === "calModal"){
-    dsel = new Set(dates());
-    const first = dates()[0];
+    /* 아직 만들지 않은 약속이면 폼에 담아둔 날짜를 그대로 이어서 고른다 (2026-09-22f) */
+    if (M) dsel = new Set(dates());
+    const first = M ? dates()[0] : Array.from(dsel).sort()[0];
     if (first){ const o = dObj(first); calY = o.getFullYear(); calM = o.getMonth(); }
     else { const o = new Date(); calY = o.getFullYear(); calM = o.getMonth(); }
-    fillHourSel($("#c_hs"), 0, 23, ST.hourStart);
-    fillHourSel($("#c_he"), 1, 24, ST.hourEnd);
+    fillHourSel($("#c_hs"), 0, 23, M ? ST.hourStart : +$("#n_hs").value);
+    fillHourSel($("#c_he"), 1, 24, M ? ST.hourEnd   : +$("#n_he").value);
     renderCal();
   }
   if (id === "setModal") renderSet();
@@ -2096,6 +2126,7 @@ function openModal(id){
 }
 function closeModal(id, fromBack){
   $("#" + id).hidden = true;
+  if (id === "calModal" && !M) renderNewDates();   // 만들기 전이면 폼의 날짜 칩을 갱신
   if (!fromBack) popModalState();
 }
 function fillHourSel(sel2, from, to, val){
@@ -2368,24 +2399,120 @@ document.addEventListener("keydown", e => {
 /* ═══ 새 약속 만들기 ═══ */
 fillHourSel($("#n_hs"), 0, 23, 18);
 fillHourSel($("#n_he"), 1, 24, 23);
+
+/* 같이 할 사람 (2026-09-22f Benny: "처음 만들 때 멤버 리스트 만들고") */
+let newMem = [];
+function renderNewMem(){
+  const box = $("#n_memChips"); box.innerHTML = "";
+  if (!newMem.length){
+    box.innerHTML = '<span class="hint" style="margin:0">아직 없어요. 나만 있어도 괜찮습니다.</span>';
+    return;
+  }
+  newMem.forEach(n => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip rm";
+    b.innerHTML = "<span></span><span class='x'>×</span>";
+    b.querySelector("span").textContent = n;
+    b.setAttribute("aria-label", n + " 빼기");
+    b.onclick = () => { newMem = newMem.filter(x => x !== n); renderNewMem(); };
+    box.appendChild(b);
+  });
+}
+function addNewMem(){
+  const v = $("#n_mem").value.trim();
+  if (!v) return;
+  const mine = $("#n_who").value.trim();
+  if (v === mine){ setStatus("내 이름은 위에 이미 적었어요", "err"); return; }
+  if (newMem.includes(v)){ setStatus("이미 있는 이름이에요", "err"); return; }
+  if (newMem.length >= 30){ setStatus("30명까지예요", "err"); return; }
+  newMem.push(v); $("#n_mem").value = ""; renderNewMem(); $("#n_mem").focus();
+}
+$("#n_memAdd").onclick = addNewMem;
+$("#n_mem").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); addNewMem(); } });
+renderNewMem();
+
+/* 후보 날짜 — 만들기 전에도 같은 달력을 쓴다 */
+function renderNewDates(){
+  const box = $("#n_dateChips"); box.innerHTML = "";
+  const list = Array.from(dsel).sort();
+  if (!list.length){
+    box.innerHTML = '<span class="hint" style="margin:0">안 골라도 됩니다. 만든 뒤에도 고를 수 있어요.</span>';
+    return;
+  }
+  list.forEach(d => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip rm";
+    b.innerHTML = "<span></span><span class='x'>×</span>";
+    b.querySelector("span").textContent = fmtFull(d);
+    b.setAttribute("aria-label", fmtFull(d) + " 빼기");
+    b.onclick = () => { dsel.delete(d); renderNewDates(); };
+    box.appendChild(b);
+  });
+}
+$("#n_calBtn").onclick = () => openModal("calModal");
+renderNewDates();
+
+/* 이름 중복은 바로 알려준다 (2026-09-22f Benny: "다 입력하고 다시하게 하지말고")
+   목록은 이미 받아둔 게 있으니 서버를 다시 부르지 않아도 된다 */
+function titleKeyOf(t){ return String(t || "").replace(/\s+/g, " ").trim().toLowerCase(); }
+function takenTitle(t){
+  const k = titleKeyOf(t);
+  if (!k) return null;
+  const list = pickRows || listSnapLoad() || [];
+  const hit = list.find(m => titleKeyOf(m.title) === k);
+  return hit ? hit : null;
+}
+function showTitleMsg(txt, cls){
+  const el = $("#n_titleMsg");
+  el.hidden = !txt; el.textContent = txt || "";
+  el.className = "fldmsg" + (cls ? " " + cls : "");
+  $("#n_title").classList.toggle("bad", cls === "bad");
+}
+let titleTimer = null;
+$("#n_title").addEventListener("input", () => {
+  clearTimeout(titleTimer);
+  titleTimer = setTimeout(() => {
+    const t = $("#n_title").value.trim();
+    if (!t){ showTitleMsg(""); return; }
+    const hit = takenTitle(t);
+    showTitleMsg(hit ? "“" + t + "” 은 이미 있는 이름이에요" : "쓸 수 있는 이름이에요 ✓",
+                 hit ? "bad" : "good");
+  }, 250);
+});
 $("#n_make").onclick = async () => {
   const title = $("#n_title").value.trim(), who = $("#n_who").value.trim();
   const a = +$("#n_hs").value, b = +$("#n_he").value;
-  if (!title){ setStatus("약속 이름을 적어주세요", "err"); $("#n_title").focus(); return; }
+  if (!title){ showTitleMsg("약속 이름을 적어주세요", "bad"); $("#n_title").focus(); return; }
+  if (takenTitle(title)){
+    showTitleMsg("“" + title + "” 은 이미 있는 이름이에요", "bad");
+    $("#n_title").focus(); $("#n_title").scrollIntoView({ behavior:"smooth", block:"center" });
+    return;
+  }
   if (!who){ setStatus("내 이름을 적어주세요", "err"); $("#n_who").focus(); return; }
   if (b <= a){ setStatus("끝 시간이 시작보다 늦어야 해요", "err"); return; }
+  const ds = Array.from(dsel).sort();
   setStatus("만드는 중…");
   try {
-    ST = await api({ action:"meet_new", title, who, place:$("#n_place").value.trim(), hourStart:a, hourEnd:b });
+    ST = await api({ action:"meet_new", title, who, place:$("#n_place").value.trim(),
+                     hourStart:a, hourEnd:b,
+                     members: newMem.join(","), dates: ds.join(",") });
     M = ST.newId || (ST.meet && ST.meet.id) || "";
     if (!M) throw new Error("약속 id 를 받지 못했습니다");
     me = who;
+    newMem = []; renderNewMem(); showTitleMsg("");
     pickRows = null; try { localStorage.removeItem(LIST_KEY); } catch(e){}   // 목록 캐시 버리기
     history.replaceState(null, "", location.pathname + "?m=" + M);
     loadMine(true); renderAll(); snapSave();
-    setStatus("만들었어요 ✓ 날짜를 골라주세요", "ok");
-    openModal("calModal");
-  } catch(e){ setStatus("실패 — " + e.message, "err"); }
+    if (ds.length){ setStatus("만들었어요 ✓ 링크를 친구들에게 보내세요", "ok"); }
+    else { setStatus("만들었어요 ✓ 날짜를 골라주세요", "ok"); openModal("calModal"); }
+  } catch(e){
+    /* 이름 중복 같은 건 칸 바로 아래에 보여준다 */
+    if (/이미 있는 이름|이름을 적어/.test(e.message)){
+      showTitleMsg(e.message, "bad");
+      $("#n_title").focus(); $("#n_title").scrollIntoView({ behavior:"smooth", block:"center" });
+      setStatus("");
+    } else setStatus("실패 — " + e.message, "err");
+  }
 };
 ["n_title","n_who","n_place"].forEach(id =>
   $("#" + id).addEventListener("keydown", e => { if (e.key === "Enter") $("#n_make").click(); }));
