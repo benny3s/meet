@@ -886,7 +886,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
     </div>
     <p class="hint" style="margin-top:6px">요일 버튼 = 이 달의 그 요일을 한꺼번에 넣고 빼기</p>
     <div class="chips" id="dateChips" style="margin-top:12px"></div>
-    <div class="fld" style="margin-top:16px"><span>기본 시간대 — 모든 날짜에 적용</span>
+    <div class="fld" id="calHourFld" style="margin-top:16px"><span>기본 시간대 — 모든 날짜에 적용</span>
       <div class="hourrow">
         <select id="c_hs"></select><span class="hint" style="margin:0">시 ~</span>
         <select id="c_he"></select><span class="hint" style="margin:0">시</span>
@@ -971,7 +971,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22g";
+const BUILD = "2026-09-22h";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -2116,8 +2116,13 @@ function openModal(id){
     const first = M ? dates()[0] : Array.from(dsel).sort()[0];
     if (first){ const o = dObj(first); calY = o.getFullYear(); calM = o.getMonth(); }
     else { const o = new Date(); calY = o.getFullYear(); calM = o.getMonth(); }
-    fillHourSel($("#c_hs"), 0, 23, M ? ST.hourStart : +$("#n_hs").value);
-    fillHourSel($("#c_he"), 1, 24, M ? ST.hourEnd   : +$("#n_he").value);
+    /* ⚠️ 만들기 전에는 시간대를 폼(위)에서만 고른다. 달력 안에도 두면 둘이 안 맞는다
+       (2026-09-22h Benny: "안에꺼 수정해도 밖에꺼가 그대로이고") */
+    $("#calHourFld").hidden = !M;
+    if (M){
+      fillHourSel($("#c_hs"), 0, 23, ST.hourStart);
+      fillHourSel($("#c_he"), 1, 24, ST.hourEnd);
+    }
     renderCal();
   }
   if (id === "setModal") renderSet();
@@ -2309,6 +2314,7 @@ $("#calClear").onclick = () => {
   dsel.clear(); renderCal(); dateChanged();
 };
 const hourApply = () => {
+  if (!M) return;                       // 아직 안 만든 약속 — 폼의 시간대를 쓴다
   const a = +$("#c_hs").value, b = +$("#c_he").value;
   if (b <= a){ setStatus("끝 시간이 시작보다 늦어야 해요", "err"); return; }
   act({ action:"meet_set", hourStart:a, hourEnd:b }, "기본 시간대 " + a + "–" + b + "시",
