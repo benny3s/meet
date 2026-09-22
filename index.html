@@ -333,6 +333,39 @@ html.scrlock,html.scrlock body{overflow:hidden;overscroll-behavior:none}
 .cal .d.past{color:var(--muted);opacity:.3;cursor:default}
 .cal .d.today{border-color:var(--ink);border-width:2px}
 .cal .d.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700}
+/* 달력 ↔ 표 전환 (2026-09-22m Benny: "둘 다 두고 전환 / 내 입력은 달력, 비교는 표") */
+.seg{display:inline-flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:12px;
+  background:var(--bg);margin:0 0 11px}
+.seg .segb{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;
+  font-size:13px;font-weight:700;letter-spacing:-.02em;padding:8px 14px;border-radius:9px;
+  cursor:pointer;min-height:38px}
+.seg .segb[aria-selected="true"]{background:var(--card);color:var(--accent);
+  box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.calnav{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 9px}
+.calnav b{font-size:15px;letter-spacing:-.02em}
+.calnav .navb{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);
+  font:inherit;font-size:17px;line-height:1;width:38px;height:38px;border-radius:9px;cursor:pointer}
+/* 달력 뷰의 칸 — 날짜 + 내 상태 기호 */
+.cal.cv{gap:5px}
+.cal.cv .d{padding:7px 0 6px;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:54px;
+  justify-content:center}
+.cal.cv .d.off{border-style:dashed;opacity:.35;cursor:default;background:transparent}
+.cal.cv .d .n{font-size:12.5px;font-weight:700;color:var(--muted)}
+.cal.cv .d .mk{font-size:17px;font-weight:800;line-height:1.1}
+.cal.cv .d .tx{font-size:9.5px;font-weight:700;opacity:.8;white-space:nowrap}
+.cal.cv .d.cand{background:var(--card);border-color:var(--line)}
+.cal.cv .d.cand .n{color:var(--ink)}
+.cal.cv .d.s-all{border-color:var(--accent)}
+.cal.cv .d.s-all .mk,.cal.cv .d.s-all .tx{color:var(--accent)}
+.cal.cv .d.s-part .mk{color:var(--accent)}
+.cal.cv .d.s-no{border-color:var(--warn)}
+.cal.cv .d.s-no .mk,.cal.cv .d.s-no .tx{color:var(--warn)}
+.cal.cv .d.s-none{border:1.5px dashed var(--accent);background:rgba(var(--accent-rgb),.06)}
+.cal.cv .d.s-none .mk,.cal.cv .d.s-none .tx{color:var(--accent)}
+.cal.cv .d.s-none{animation:breathe 2.6s ease-in-out infinite}
+.cal.cv .d.fixday{box-shadow:inset 0 0 0 2px var(--ink)}
+@media (prefers-reduced-motion:reduce){ .cal.cv .d.s-none{animation:none;opacity:1} }
+
 .datechip{display:inline-flex;align-items:center;gap:6px}
 .datechip .x{opacity:.65;font-size:15px;line-height:1}
 
@@ -830,8 +863,21 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 
   <!-- 표 -->
   <div class="card" id="sheetCard">
+    <div class="seg" id="viewSeg" role="tablist">
+      <button class="segb" id="segCal" type="button" role="tab">📅 달력</button>
+      <button class="segb" id="segTab" type="button" role="tab">📋 표</button>
+    </div>
     <p class="hint" id="sheetHint" style="margin:0 0 10px"></p>
-    <div class="grid-wrap"><table class="sheet" id="sheet"></table></div>
+    <div id="calView" hidden>
+      <div class="calnav">
+        <button class="navb" id="cvPrev" type="button" aria-label="이전 달">‹</button>
+        <b id="cvLabel"></b>
+        <button class="navb" id="cvNext" type="button" aria-label="다음 달">›</button>
+      </div>
+      <div class="cal cv" id="cvGrid"></div>
+      <p class="hint" id="cvOther" style="margin:10px 0 0" hidden></p>
+    </div>
+    <div class="grid-wrap" id="tabView"><table class="sheet" id="sheet"></table></div>
   </div>
 
 </section>
@@ -1059,7 +1105,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22l";
+const BUILD = "2026-09-22m";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1561,6 +1607,7 @@ function renderAll(){
   $("#calOpenBtn").textContent = has ? "날짜 수정" : "날짜 고르기";
   renderWho();
   drawSheet();
+  renderSheetArea();
 }
 
 /* 누구세요 카드 (2026-09-22k Benny 가 그려준 대로)
@@ -1642,6 +1689,86 @@ function pickMe(n){
   }
   loadMine(true); renderAll();
   setStatus(n + " 님으로 칠합니다", "ok");
+}
+
+/** ○ 다 돼요 / △ 일부만 / ✕ 안 돼요 / – 미정 — 표와 달력이 **같은 기호**를 쓴다
+    (2026-09-22l Benny: "되면 O, 부분적으로 되면 세모, 안되면 X, 미정은 –") */
+function markOf(d, hrs, ans, mine){
+  const full = hoursFor(d).length;
+  if (ans && hrs && hrs.length){
+    const whole = (hrs.length >= full && full > 0);
+    return whole ? { cls:"all",  mk:"○", tx:"다 돼요" }
+                 : { cls:"part", mk:"△", tx:runsOf(hrs, true) };
+  }
+  if (ans) return { cls:"no", mk:"✕", tx:"안 돼요" };
+  return { cls:"none", mk:"–", tx: mine ? "입력" : "미정" };
+}
+
+/* ── 달력 보기 — 내 입력 전용. 가로 스크롤 없이 날짜 감각이 살아난다
+      (2026-09-22m Benny: "날짜가 가로로 길어서 보기가 불편한데, 달력 모양으로") ── */
+let sheetView = "cal", cvY = 0, cvM = 0, cvInit = false;
+function loadView(){ try { sheetView = localStorage.getItem("meet_view") || "cal"; } catch(e){ sheetView = "cal"; } }
+function setView(v){
+  sheetView = (v === "tab") ? "tab" : "cal";
+  try { localStorage.setItem("meet_view", sheetView); } catch(e){}
+  renderSheetArea();
+}
+function renderSheetArea(){
+  const cal = sheetView === "cal";
+  $("#segCal").setAttribute("aria-selected", String(cal));
+  $("#segTab").setAttribute("aria-selected", String(!cal));
+  $("#calView").hidden = !cal;
+  $("#tabView").hidden = cal;
+  if (cal) renderCalView();
+}
+function cvReset(){ cvInit = false; cvY = 0; }
+function cvJump(){                                   // 첫 후보 날짜의 달로
+  const ds = dates();
+  const o = ds.length ? dObj(ds[0]) : new Date();
+  cvY = o.getFullYear(); cvM = o.getMonth();
+}
+function renderCalView(){
+  const ds = dates();
+  if (!cvInit && ds.length){ cvJump(); cvInit = true; }
+  if (!cvY){ cvJump(); }
+  $("#cvLabel").textContent = cvY + "년 " + (cvM + 1) + "월";
+  const g = $("#cvGrid"); g.innerHTML = "";
+  DOW.forEach((w, i) => {
+    const h = document.createElement("div");
+    h.className = "dowh" + (i === 0 ? " sun" : "");
+    h.textContent = w; g.appendChild(h);
+  });
+  const first = new Date(cvY, cvM, 1), days = new Date(cvY, cvM + 1, 0).getDate();
+  const set = new Set(ds), today = todayIso();
+  for (let i = 0; i < first.getDay(); i++){
+    const b = document.createElement("div"); b.className = "d blank"; g.appendChild(b);
+  }
+  for (let n = 1; n <= days; n++){
+    const d = iso(new Date(cvY, cvM, n));
+    const cand = set.has(d);
+    const b = document.createElement("button"); b.type = "button"; b.dataset.d = d;
+    b.innerHTML = '<span class="n"></span><span class="mk"></span><span class="tx"></span>';
+    b.querySelector(".n").textContent = n;
+    if (!cand){
+      b.className = "d off"; b.disabled = true;
+      b.querySelector(".mk").textContent = ""; b.querySelector(".tx").textContent = "";
+      g.appendChild(b); continue;
+    }
+    const m = me ? markOf(d, myHours(d), myAnswered(d), true)
+                 : { cls:"none", mk:"–", tx:"미정" };
+    b.className = "d cand s-" + m.cls + (d === today ? " today" : "") + (isFixedDay(d) ? " fixday" : "");
+    b.querySelector(".mk").textContent = m.mk;
+    b.querySelector(".tx").textContent = m.tx;
+    b.title = fmtFull(d) + " · " + winLabel(d);
+    b.onclick = () => { if (!me){ askName(); return; } openDay(d, null, "edit"); };
+    g.appendChild(b);
+  }
+  /* 이 달 밖에 있는 후보 날짜를 알려준다 — 안 그러면 없는 줄 안다 */
+  const out = ds.filter(d => { const o = dObj(d); return o.getFullYear() !== cvY || o.getMonth() !== cvM; });
+  const ot = $("#cvOther");
+  ot.hidden = !out.length;
+  if (out.length) ot.textContent = "다른 달에 " + out.length + "일 더 있어요 — " +
+      out.slice(0, 5).map(fmtD).join(", ") + (out.length > 5 ? " …" : "") + "  (‹ › 로 이동)";
 }
 
 /* ── 표: 줄 = 사람, 칸 = 날짜 ── */
@@ -1731,27 +1858,12 @@ function drawSheet(){
       const hrs  = mine ? myHours(d) : (H[n] || {})[d];
       const ans  = mine ? myAnswered(d) : Array.isArray(hrs);
       const memo = mine ? (noteDraft[d] || "") : ((N[n] || {})[d] || "");
-      /* ○ 다 돼요 / △ 일부 / ✕ 안 돼요 / – 미정 — 네 가지를 한눈에
-         (2026-09-22l Benny: "되면 O, 부분적으로 되면 세모, 안되면 X, 미정은 –") */
+      const mk = markOf(d, hrs, ans, mine);
       const sp = document.createElement("span");
-      const full = hoursFor(d).length;
-      if (ans && hrs && hrs.length){
-        const whole = (hrs.length >= full && full > 0);
-        sp.className = "hr " + (whole ? "all" : "part");
-        sp.innerHTML = '<span class="mk"></span><span class="tx"></span>';
-        sp.querySelector(".mk").textContent = whole ? "○" : "△";
-        sp.querySelector(".tx").textContent = whole ? "다 돼요" : runsOf(hrs, true);
-      } else if (ans){
-        sp.className = "hr no";
-        sp.innerHTML = '<span class="mk"></span><span class="tx"></span>';
-        sp.querySelector(".mk").textContent = "✕";
-        sp.querySelector(".tx").textContent = "안 돼요";
-      } else {
-        sp.className = "hr none";
-        sp.innerHTML = '<span class="mk"></span><span class="tx"></span>';
-        sp.querySelector(".mk").textContent = "–";
-        sp.querySelector(".tx").textContent = mine ? "입력" : "미정";
-      }
+      sp.className = "hr " + mk.cls;
+      sp.innerHTML = '<span class="mk"></span><span class="tx"></span>';
+      sp.querySelector(".mk").textContent = mk.mk;
+      sp.querySelector(".tx").textContent = mk.tx;
       if (mine && !ans) td.className = "todo";      // 아직 안 넣은 내 칸
       b.appendChild(sp);
       if (memo){ const mm = document.createElement("span"); mm.className = "mm"; mm.textContent = memo; b.appendChild(mm); }
@@ -2398,7 +2510,8 @@ async function copyLink(){
 
 /* 제목을 누르면 처음 화면(새 약속 만들기)으로 — 되돌아가기 (2026-09-21 Benny) */
 function goHome(){
-  if (!M && !isAdmin()){ load(true); return; }       // 이미 처음 화면이면 새로고침
+  if (!M && !isAdmin()){ load(true); return; }
+  cvReset();       // 이미 처음 화면이면 새로고침
   if (dirty && !confirm("저장하지 않은 표시가 있습니다. 그래도 나갈까요?")) return;
   M = ""; ST = { meet:null };
   me = ""; whoOpen = false; whoAdd = false; dirty = false;
@@ -2420,12 +2533,17 @@ window.addEventListener("popstate", () => {
   const nm = new URLSearchParams(location.search).get("m") || "";
   if (nm === M) return;
   M = nm; ST = { meet:null }; me = ""; whoOpen = false; whoAdd = false; dirty = false;
+  cvReset();
   if (M){ snapLoad(); renderAll(); load(); } else showNew();
 });
 $("#titleBtn").onclick  = goHome;
 $("#saveBtn").onclick   = save;
 $("#heatOpenBtn").onclick = () => { heatSel = null; renderResult(); openModal("heatModal"); };
 $("#calOpenBtn").onclick  = () => openModal("calModal");
+$("#segCal").onclick = () => setView("cal");
+$("#segTab").onclick = () => setView("tab");
+$("#cvPrev").onclick = () => { if (--cvM < 0){ cvM = 11; cvY--; } renderCalView(); };
+$("#cvNext").onclick = () => { if (++cvM > 11){ cvM = 0; cvY++; } renderCalView(); };
 $("#mShare").onclick      = shareLink;
 $("#nShare").onclick      = shareLink;
 $("#mEdit").onclick       = () => openModal("setModal");
@@ -2805,6 +2923,7 @@ $("#n_make").onclick = async () => {
                      hourStart:a, hourEnd:b,
                      members: newMem.join(","), dates: ds.join(",") });
     M = ST.newId || (ST.meet && ST.meet.id) || "";
+    cvReset();
     if (!M) throw new Error("약속 id 를 받지 못했습니다");
     me = who;
     try { localStorage.setItem("meet_lastname", who); } catch(e){}   // 다음에 이름칸을 채워준다
@@ -2845,6 +2964,7 @@ $("#n_make").onclick = async () => {
 window.addEventListener("beforeunload", e => { if (dirty){ e.preventDefault(); e.returnValue = ""; } });
 
 /* ═══ 시작 ═══ */
+loadView();
 if (M && snapLoad()){
   loadMine(true); renderAll();
   setStatus("최신 확인 중…");
