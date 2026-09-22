@@ -1106,7 +1106,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22n";
+const BUILD = "2026-09-22o";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1483,7 +1483,8 @@ function loadMine(force){
 }
 function myHours(d){ return hoursFor(d).filter(h => sel.has(key(d,h))); }
 function myAnswered(d){ return myHours(d).length > 0 || noneSel.has(d); }
-function touch(){ dirty = true; $("#saveBtn").hidden = false; setStatus("저장 안 됨 — 아래 저장을 눌러주세요", "warn"); }
+/* 입력 중 표시. 버튼은 숨긴다 — 닫으면 저장되고, 실패했을 때만 renderAll 이 버튼을 띄운다 */
+function touch(){ dirty = true; $("#saveBtn").hidden = true; setStatus("입력 중… — 창을 닫으면 저장됩니다"); }
 
 /* ═══ 쓰기 (낙관적 반영) ═══ */
 const pending = new Map(); let pendSeq = 0;
@@ -1525,7 +1526,8 @@ async function load(fresh){
     if (ST.gone){ setStatus("없는 약속이에요 — 링크를 확인해주세요", "err"); showNew(); return; }
     /* 이름은 기억하지 않는다 — 약속을 옮기면 '누구세요' 에서 다시 고른다.
        (이 페이지에서 이미 고른 이름은 그대로 두고, 명단에서 사라졌으면 비운다) */
-    if (!dirty && !saving && me && !members().includes(me)) me = "";
+    if (!dirty && !saving && me && !members().includes(me)){ me = ""; saveMe(""); }
+    restoreMe();
     /* ⚠️ force 를 주면 안 된다 — 저장 안 된 내 입력을 서버 값이 덮어쓴다 */
     loadMine(); renderAll(); snapSave();
     setStatus("최신 상태", "ok");
@@ -1671,6 +1673,7 @@ function renameMe(v){
   whoRen = false; whoAdd = false; whoOpen = false;
   me = v;
   try { localStorage.setItem("meet_lastname", v); } catch(e){}
+  saveMe(v);
   $("#whoInput").value = "";
   act({ action:"member_rename", from: from, to: v }, from + " → " + v + " 로 바꿨습니다", () => {
     ST.members = (ST.members || []).map(x => (x === from ? v : x));
@@ -1682,11 +1685,22 @@ function renameMe(v){
   renderAll();
 }
 function lastName(){ try { return localStorage.getItem("meet_lastname") || ""; } catch(e){ return ""; } }
+/* 고른 이름은 **그 약속에 한해** 기억한다 — 새로고침으로 풀리면 매번 다시 고르게 된다
+   (2026-09-22o Benny: "새로 고침 할 때마다 명재로 된게 풀리던데 의도한거야?")
+   약속마다 키가 다르니 '다른 약속으로 가면 다시 고른다' 는 규칙은 그대로다. */
+function meKey(){ return "meet_me:" + M; }
+function saveMe(n){ try { n ? localStorage.setItem(meKey(), n) : localStorage.removeItem(meKey()); } catch(e){} }
+function restoreMe(){
+  if (me || !M) return;
+  let n = ""; try { n = localStorage.getItem(meKey()) || ""; } catch(e){}
+  if (n && members().includes(n)){ me = n; whoOpen = false; }
+}
 function pickMe(n){
   n = String(n || "").trim();
   if (!n) return;
   me = n; whoOpen = false; whoAdd = false;
   try { localStorage.setItem("meet_lastname", n); } catch(e){}
+  saveMe(n);
   $("#whoInput").value = "";
   if (!members().includes(n)){
     act({ action:"member_add", name:n }, n + " 님 추가됨", () => { if (!ST.members.includes(n)) ST.members.push(n); });
@@ -1789,6 +1803,11 @@ function cvRange(){
   ds.forEach(d => { const o = dObj(d), i = mIdx(o.getFullYear(), o.getMonth()); if (i < lo) lo = i; if (i > hi) hi = i; });
   return { lo, hi };
 }
+
+/** 표와 달력을 **같이** 다시 그린다.
+    ⚠️ `drawSheet()` 만 부르면 달력 보기에서는 화면이 그대로다
+    (2026-09-22o Benny: "가능으로 입력했는데 화면이 안바뀌어") */
+function paintSheet(){ drawSheet(); renderSheetArea(); }
 
 /* ── 표: 줄 = 사람, 칸 = 날짜 ── */
 function drawSheet(){
@@ -1945,7 +1964,7 @@ function renderDmHours(){
       const k = key(d,h);
       sel.has(k) ? sel.delete(k) : sel.add(k);
       noneSel.delete(d);
-      renderDmHours(); drawSheet(); touch();
+      renderDmHours(); paintSheet(); touch();
     };
     box.appendChild(b);
   });
@@ -2035,6 +2054,11 @@ function openDay(d, who, mode){
 function closeDay(fromBack){
   $("#dayModal").hidden = true; dmDate = null;
   if (!fromBack) popModalState();
+  /* 표시만 해두고 창을 닫아도 **알아서 저장**한다.
+     전에는 아래에 '저장 안 됨 — 저장을 눌러주세요' 바만 남아서 그게 뭔지 몰랐다
+     (2026-09-22o Benny: "맨 밑에 저장 버튼은 뭐야?")
+     `save()` 는 맨 앞에서 dirty 를 내리므로 dmSave 로 들어와도 두 번 저장하지 않는다. */
+  if (dirty && me && !saving) save();
 }
 
 function mkHourBtn(from, to, val){
@@ -2605,7 +2629,7 @@ $("#dmCancel").onclick = () => {
     dmSnap.on.forEach(h => sel.add(key(d,h)));
     if (dmSnap.no) noneSel.add(d); else noneSel.delete(d);
     if (dmSnap.memo) noteDraft[d] = dmSnap.memo; else delete noteDraft[d];
-    drawSheet();
+    paintSheet();
   }
   if (d) openDay(d, dmWho, "sum"); else closeDay();   // 되돌리고 요약으로
 };
@@ -2629,24 +2653,24 @@ $("#dmInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#dmSa
 $("#dmClear").onclick = () => {
   const d = dmDate; if (!d) return;
   hoursFor(d).forEach(h => sel.delete(key(d,h))); noneSel.delete(d);
-  renderDmHours(); drawSheet(); touch();
+  renderDmHours(); paintSheet(); touch();
 };
 $("#dmYes").onclick = () => {
   const d = dmDate; if (!d) return;
   hoursFor(d).forEach(h => sel.add(key(d,h))); noneSel.delete(d);
-  renderDmHours(); drawSheet(); touch();
+  renderDmHours(); paintSheet(); touch();
 };
 $("#dmNo").onclick = () => {
   const d = dmDate; if (!d) return;
   hoursFor(d).forEach(h => sel.delete(key(d,h))); noneSel.add(d);
-  renderDmHours(); drawSheet(); touch();
+  renderDmHours(); paintSheet(); touch();
 };
 $("#dmSave").onclick = () => {
   if (!dmDate || !me) return;
   const v = $("#dmInput").value.trim();
   if ((noteDraft[dmDate] || "") !== v){ v ? (noteDraft[dmDate] = v) : delete noteDraft[dmDate]; dirty = true; }
   const d = dmDate;
-  drawSheet(); save();
+  paintSheet(); save();
   dmSnap = { on: hoursFor(d).filter(h => sel.has(key(d,h))), no: noneSel.has(d), memo: noteDraft[d] || "" };
   /* 저장하면 바로 닫는다 — 요약으로 남겨두면 ✕ 를 한 번 더 눌러야 했다
      (2026-09-22k Benny: "저장 눌렀는데 팝업이 여전히 떠있어서 한 번 더 닫는 동작을") */
@@ -2994,6 +3018,7 @@ window.addEventListener("beforeunload", e => { if (dirty){ e.preventDefault(); e
 /* ═══ 시작 ═══ */
 loadView();
 if (M && snapLoad()){
+  restoreMe();
   loadMine(true); renderAll();
   setStatus("최신 확인 중…");
 } else {
