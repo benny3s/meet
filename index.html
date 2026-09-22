@@ -209,6 +209,16 @@ table.sheet td.on .hr,table.sheet td.on .mm{color:var(--on-accent);opacity:1}
   padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:82vh;overflow:auto;
   box-shadow:0 -8px 28px rgba(0,0,0,.18)}
 .modal#gridModal{z-index:55}
+.modal#heatModal{z-index:58}
+/* 키가 고정된 창 — 내용이 늘어도 창이 안 움직이고 안쪽만 스크롤된다 */
+.modal .sheet.fixh{padding:0;overflow:hidden;display:flex;flex-direction:column;
+  height:min(86vh,880px);height:min(86dvh,880px);max-height:none}
+.modal .sheet.fixh .shead{flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;
+  gap:10px;padding:15px 16px 12px;border-bottom:1px solid var(--line)}
+.modal .sheet.fixh .shead h2{font-size:17px;font-weight:800;letter-spacing:-.03em}
+.modal .sheet.fixh .shead .hint{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal .sheet.fixh .sbody{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;padding:12px 16px calc(18px + env(safe-area-inset-bottom))}
 .modal .sheet.tall{max-height:92vh}
 .subh{font-size:14.5px;font-weight:700;margin:14px 0 2px;letter-spacing:-.02em}
 .foldbtn{appearance:none;border:0;background:transparent;color:var(--muted);font-size:14px;min-width:44px;min-height:44px;
@@ -406,7 +416,6 @@ table.sheet tr.me td.bestcol{background:rgba(var(--accent-rgb),.16)}
 .callout{display:block;margin:0 0 11px;padding:10px 12px;border-radius:12px;
   background:rgba(var(--accent-rgb),.09);color:var(--ink);font-size:12.5px;line-height:1.5}
 .callout b{color:var(--accent)}
-#resultCard h2{font-size:17px}
 /* 처음 오는 사람을 위한 1-2-3 (2026-09-22 Benny 시안) */
 .steps{display:flex;gap:6px;margin:0 0 12px}
 .steps .step{flex:1 1 0;min-width:0;background:rgba(var(--accent-rgb),.07);border-radius:12px;
@@ -730,22 +739,6 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
     <div class="grid-wrap"><table class="sheet" id="sheet"></table></div>
   </div>
 
-  <!-- 결과 — 2026-09-22b 부터 팝업이 아니라 이 자리에 붙어 있다 (Benny: "하나로 합치고") -->
-  <div class="card" id="resultCard">
-    <h2 id="resTitle">언제가 제일 좋을까</h2>
-    <p class="hint" id="resSub"></p>
-    <div id="bestCard">
-      <h3 class="subh">이런 시간은 어때요?</h3>
-      <p class="hint">연속 2시간 이상 되는 때입니다. <b>선택</b>하면 아래 후보로 담깁니다.</p>
-      <div class="row tight" id="threshChips" style="margin-bottom:12px"></div>
-      <div class="best" id="best"></div>
-    </div>
-    <h3 class="subh" style="margin-top:18px">직접 고르기</h3>
-    <p class="hint" id="heatHint" style="margin:4px 0 0">시작 칸을 누르고, 끝 칸을 한 번 더 누르면 그 구간이 후보가 됩니다. 숫자 = 그 시간에 되는 사람 수.</p>
-    <div class="grid-wrap" style="margin-top:12px"><div class="grid" id="heat"></div></div>
-    <div id="heatDetail"></div>
-    <div id="picksCard"></div>
-  </div>
 </section>
 
 <footer id="foot"></footer>
@@ -863,6 +856,34 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
 </div>
 
 <!-- ══════════ 결과 ══════════ -->
+<!-- ══════════ 결과 ══════════
+     키가 고정된 창이다 (2026-09-22c Benny: "아래 고정되어서 별로였던거고, 아래로 너무 길어져서 별로").
+     내용이 늘어도 창 크기가 그대로라 보던 자리가 안 움직이고, 안쪽만 스크롤된다. -->
+<div class="modal" id="heatModal" hidden>
+  <div class="sheet fixh" role="dialog" aria-modal="true">
+    <div class="shead">
+      <div style="min-width:0">
+        <h2 style="margin:0">언제가 제일 좋을까</h2>
+        <p class="hint" id="resSub" style="margin:2px 0 0"></p>
+      </div>
+      <button class="iconbtn" type="button" data-close aria-label="닫기">✕</button>
+    </div>
+    <div class="sbody">
+    <div id="bestCard">
+      <h3 class="subh">이런 시간은 어때요?</h3>
+      <p class="hint">연속 2시간 이상 되는 때입니다. <b>선택</b>하면 아래 후보로 담깁니다.</p>
+      <div class="row tight" id="threshChips" style="margin-bottom:12px"></div>
+      <div class="best" id="best"></div>
+    </div>
+    <h3 class="subh" style="margin-top:18px">직접 고르기</h3>
+    <p class="hint" id="heatHint" style="margin:4px 0 0">시작 칸을 누르고, 끝 칸을 한 번 더 누르면 그 구간이 후보가 됩니다. 숫자 = 그 시간에 되는 사람 수.</p>
+    <div class="grid-wrap" style="margin-top:12px"><div class="grid" id="heat"></div></div>
+    <div id="heatDetail"></div>
+    <div id="picksCard"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ 약속 설정 ══════════ -->
 <div class="modal" id="setModal" hidden>
   <div class="sheet tall" role="dialog" aria-modal="true">
@@ -908,7 +929,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22b";
+const BUILD = "2026-09-22c";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1314,7 +1335,7 @@ async function act(params, okMsg, applyLocal){
 function absorb(){
   if (me && !members().includes(me)) members().push(me);   // 아직 서버에 안 닿은 내 이름은 유지
   loadMine(); renderAll();
-  renderResult();                                          // 결과 카드도 같이 갱신
+  if (!$("#heatModal").hidden) renderResult();             // 열려 있는 결과 창도 같이 갱신
   snapSave();
 }
 
@@ -1385,14 +1406,12 @@ function renderAll(){
   const has = dates().length > 0;
   $("#emptyCard").hidden = has;
   $("#sheetCard").hidden = !has;
-  $("#resultCard").hidden = !has;
   $("#heatOpenBtn").hidden = !has;
   $("#saveBtn").hidden = !(has && me && dirty);
   $("#foot").textContent = "약속 잡자 " + BUILD + (lastMs ? " · 서버 " + (lastMs/1000).toFixed(1) + "초" : "");
 
   renderWho();
   drawSheet();
-  if (has) renderResult();
 }
 
 /* 이름 입력칸은 '＋ 새 이름' 을 눌렀을 때만 펼친다 (2026-09-21 Benny) */
@@ -1891,9 +1910,7 @@ function renderResult(){
   const sub = $("#resSub");
   if (sub){
     const n = responders().length, tot = members().length;
-    sub.textContent = n
-      ? n + " / " + tot + "명이 칠했어요. 마음에 드는 시간을 선택해 후보로 담아보세요."
-      : "아직 아무도 안 칠했어요. 표에서 되는 시간을 칠하면 여기에 결과가 나옵니다.";
+    sub.textContent = n ? n + " / " + tot + "명이 칠했어요" : "아직 아무도 안 칠했어요";
   }
 }
 
@@ -2016,6 +2033,7 @@ async function saveDates(){
 
 /* ═══ 모달 ═══ */
 function openModal(id){
+  if (id === "heatModal") renderResult();
   if (id === "calModal"){
     dsel = new Set(dates());
     const first = dates()[0];
@@ -2108,7 +2126,7 @@ window.addEventListener("popstate", () => {
 $("#titleBtn").onclick  = goHome;
 $("#linkBtn").onclick   = copyLink;
 $("#saveBtn").onclick   = save;
-$("#heatOpenBtn").onclick = () => { renderResult(); $("#resultCard").scrollIntoView({ behavior:"smooth", block:"start" }); };
+$("#heatOpenBtn").onclick = () => { heatSel = null; renderResult(); openModal("heatModal"); };
 $("#calOpenBtn").onclick  = () => openModal("calModal");
 $("#mEdit").onclick       = () => openModal("setModal");
 
@@ -2267,11 +2285,11 @@ $("#s_reset").onclick = () => {
 };
 
 $$(".modal [data-close]").forEach(b => b.addEventListener("click", () => b.closest(".modal").hidden = true));
-["calModal","setModal","pickModal"].forEach(id =>
+["calModal","heatModal","setModal","pickModal"].forEach(id =>
   $("#" + id).addEventListener("click", e => { if (e.target.id === id) closeModal(id); }));
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
-  const open = ["dayModal","calModal","setModal","pickModal"].find(id => !$("#" + id).hidden);
+  const open = ["dayModal","calModal","heatModal","setModal","pickModal"].find(id => !$("#" + id).hidden);
   if (open) $("#" + open).hidden = true;
 });
 /* 창이 열려 있으면 뒤 페이지가 같이 스크롤되지 않게 */
