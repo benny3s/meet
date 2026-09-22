@@ -58,16 +58,16 @@ var _SS = null, _SHEETS = null, _TAB = {}, _ROWS = {};
  * ─ 쓰기는 시트에 쓰고 캐시도 같은 내용으로 갱신합니다
  * ─ 시트를 손으로 고쳤다면 `fresh=1` 로 캐시를 무시하고 다시 읽습니다 (페이지의 '새로고침') */
 var CACHE_TTL = 21600;       // 6시간 (ScriptCache 최대값)
-/* 캐시 적중분은 수명만 다시 늘려준다(슬라이딩 만료). 누가 6시간 안에 한 번씩만 써도
- * 캐시가 살아 있으니, 만료된 캐시를 만난 사람이 8개 탭을 전부 읽는 일(10초 이상)이 없다.
- * 호출 끝에 putAll 한 번으로 모아서 쓴다. */
-var _TOUCH = {};
-function touchFlush_() {
-  var n = 0; for (var k in _TOUCH) n++;
-  if (!n) return;
-  try { cache_().putAll(_TOUCH, CACHE_TTL); } catch (e) {}
-  _TOUCH = {};
-}
+/* 🚨🚨 2026-09-22 사고 (v9) — 남의 응답이 통째로 날아갔다 (정민 님: edit 시각은 남고 resp 가 0줄)
+ * 예전에는 "캐시 적중분은 수명만 다시 늘린다(슬라이딩 만료)" 며 **읽을 때 본 값을 호출 끝에 캐시에 다시 썼다**.
+ * 한 사람 안에서는 put_ 이 _TOUCH 에서 빼 줘서 괜찮았지만, **여러 사람이 동시에** 쓰면
+ *   ① A 가 load(읽기) 시작 → 그 순간의 resp 를 들고 있는다
+ *   ② B 가 저장 → 시트·캐시에 새 resp 를 쓴다
+ *   ③ A 의 load 가 끝나며 **들고 있던 옛 resp 를 캐시에 덮어쓴다**
+ *   ④ 다음 사람이 그 옛 resp 를 읽어 탭 전체를 되돌려 쓴다 → B 의 응답이 시트에서 사라진다
+ * 읽기는 잠그지 않으니 ①③ 은 막을 수 없다. → **되쓰기를 없앴다.**
+ * 수명은 15분마다 도는 warm() 이 **시트에서 다시 읽어** 채우므로 만료 걱정이 없다. */
+function touchFlush_() { }
 var _FRESH = false;
 function cache_() { return CacheService.getScriptCache(); }
 function ckey_(key) { return 'meet1_' + key; }
@@ -78,12 +78,22 @@ function keysAll_() { var a = []; for (var k in TABS) a.push(ckey_(k)); return a
  *  (컨테이너 콜드 스타트 + 캐시 만료로 6개 탭을 전부 다시 읽기).
  *  트리거: Apps Script 편집기 왼쪽 ⏰ 트리거 → 트리거 추가 →
  *         함수 warm / 시간 기반 / 분 단위 타이머 / 15분마다 */
+/** 15분 트리거. **시트(원본)에서 다시 읽어** 캐시를 통째로 새로 채운다.
+ *  · 캐시 수명(6시간)을 계속 밀어준다 — 슬라이딩 만료를 없앤 자리를 이게 메운다 (v9)
+ *  · 혹시 캐시가 시트와 어긋나 있어도 여기서 원상복구된다
+ *  · 쓰기와 겹치지 않게 **같은 잠금**을 잡는다. 못 잡으면 그냥 다음 차례에 한다. */
 function warm() {
-  _SS = null; _SHEETS = null; _TAB = {}; _ROWS = {};
-  _FRESH = true;                       // 시트에서 다시 읽어 캐시를 새로 채운다
-  for (var k in TABS) open_(k);
-  _FRESH = false;
-  return 'warm ok';
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(30000); } catch (e) { return 'warm skipped (busy)'; }
+  try {
+    _SS = null; _SHEETS = null; _TAB = {}; _ROWS = {};
+    _FRESH = true;                     // 캐시를 건너뛰고 시트에서 읽는다
+    var m = {};
+    for (var k in TABS) m[ckey_(k)] = JSON.stringify(open_(k));
+    _FRESH = false;
+    cache_().putAll(m, CACHE_TTL);
+    return 'warm ok';
+  } finally { try { lock.releaseLock(); } catch (ignore) {} }
 }
 
 function ss_() {
@@ -108,8 +118,7 @@ function open_(key) {
     var hit = cache_().get(ckey_(key));
     if (hit) {
       try {
-        _ROWS[key] = JSON.parse(hit);
-        _TOUCH[ckey_(key)] = hit;                  // 쓴 지 6시간이 지나 만료되지 않게 수명을 늘린다
+        _ROWS[key] = JSON.parse(hit);            // ⚠️ 여기서 캐시에 되쓰지 않는다 (v9 사고)
         return _ROWS[key];
       } catch (e) {}
     }
@@ -212,9 +221,6 @@ function put_(key, list) {
 
   _ROWS[key] = list;
   cache_().put(ckey_(key), JSON.stringify(list), CACHE_TTL);
-  /* 🚨 2026-09-20 사고: 읽을 때 _TOUCH 에 잡아둔 '옛 값'이 호출 끝 touchFlush_() 에서 캐시에 다시 써져
-     방금 쓴 내용을 덮었다 → 다음 쓰기가 옛 목록을 읽어 시트까지 되돌림. 쓴 탭은 touch 목록에서 뺀다. */
-  delete _TOUCH[ckey_(key)];
 }
 
 function uid_(p) {
