@@ -971,7 +971,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22f";
+const BUILD = "2026-09-22g";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -2499,6 +2499,13 @@ $("#n_make").onclick = async () => {
     M = ST.newId || (ST.meet && ST.meet.id) || "";
     if (!M) throw new Error("약속 id 를 받지 못했습니다");
     me = who;
+    /* 🛟 서버가 아직 v7 이면 members 를 모른다 → 빠진 사람만 하나씩 넣는다 (2026-09-22g).
+       v8 을 배포하면 한 번에 들어와서 이 우회로는 그냥 안 쓰인다. */
+    const got = ST.members || [];
+    const miss = newMem.filter(n => n !== who && !got.includes(n));
+    for (const n of miss){
+      try { ST = await api({ action:"member_add", m:M, name:n }); } catch(e){}
+    }
     newMem = []; renderNewMem(); showTitleMsg("");
     pickRows = null; try { localStorage.removeItem(LIST_KEY); } catch(e){}   // 목록 캐시 버리기
     history.replaceState(null, "", location.pathname + "?m=" + M);
