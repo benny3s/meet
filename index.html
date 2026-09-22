@@ -1124,7 +1124,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22q";
+const BUILD = "2026-09-22r";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -2116,6 +2116,27 @@ async function save(){
     payload.hours[d] = hs.length ? hs : (noneSel.has(d) ? [] : null);
     payload.notes[d] = noteDraft[d] || "";
   });
+  /* 🚨 빈 저장 막기 (2026-09-22r)
+     정민 님 사고: 수정시각만 남고 응답이 0줄 — 전부 null 인 payload 가 나갔다.
+     ① 날짜를 아직 못 받았으면(dates 0) 아예 보내지 않는다 — 보내봐야 시각만 찍힌다.
+     ② 전부 미정인데 전에 넣어둔 게 있으면 **정말 지울 건지 묻는다**. */
+  const anyVal = dates().some(d => payload.hours[d] !== null) ||
+                 dates().some(d => !!payload.notes[d]);
+  const hadBefore = Object.keys((ST.hours || {})[me] || {}).length;
+  if (!dates().length){
+    saving = false;
+    setStatus("날짜를 아직 못 받았어요 — ↻ 를 눌러주세요", "err");
+    return;
+  }
+  if (!anyVal && hadBefore){
+    saving = false;
+    if (!confirm("입력한 " + hadBefore + "일을 전부 '미정' 으로 되돌립니다. 맞나요?")){
+      loadMine(true); renderAll();
+      setStatus("그대로 두었습니다", "ok");
+      return;
+    }
+    saving = true;
+  }
   const backup = JSON.stringify({ h: ST.hours, n: ST.notes, e: ST.edited });
   if (!ST.hours) ST.hours = {};
   if (!ST.notes) ST.notes = {};

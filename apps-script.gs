@@ -223,6 +223,24 @@ function put_(key, list) {
   cache_().put(ckey_(key), JSON.stringify(list), CACHE_TTL);
 }
 
+/** 📼 저장 기록 — **절대 덮어쓰지 않는다**. put_ 처럼 탭 전체를 다시 쓰지 않고 한 줄씩 붙이기만 한다.
+ *  TABS 에 없으므로 캐시·put_ 의 영향도 안 받는다. 뭐가 날아가도 여기서 그대로 되살릴 수 있다. (v10)
+ *  (2026-09-22 Benny: "혹시모를 사태 대비해 기록된게 어딘가에 저장되긴해?") */
+function logSave_(mid, name, payload) {
+  try {
+    var sh = sheetByName_('기록');
+    if (!sh) {
+      sh = ss_().insertSheet('기록');
+      sh.getRange(1, 1, 1, 4).setValues([['시각', '약속', '이름', '내용']]).setFontWeight('bold');
+      sh.setFrozenRows(1);
+      _SHEETS = null;
+      sh = sheetByName_('기록');
+    }
+    sh.appendRow([Utilities.formatDate(new Date(), 'Asia/Seoul', "yyyy-MM-dd'T'HH:mm:ss"),
+                  String(mid), String(name), JSON.stringify(payload).slice(0, 5000)]);
+  } catch (e) {}        // 기록이 실패해도 저장 자체를 막지는 않는다
+}
+
 function uid_(p) {
   return p + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyMMddHHmmss') +
          Math.floor(Math.random() * 1000);
@@ -576,6 +594,7 @@ function act_(action, p) {
     addMember_(mid, name);                              // 처음 응답하는 사람은 자동으로 참여자에 들어간다
     var body = JSON.parse(p.payload || '{}');
     var ph = body.hours || {}, pn = body.notes || {};
+    logSave_(mid, name, body);                          // 📼 먼저 기록부터 (v10)
 
     var rl = rows_('resp').filter(function (x) {
       return !(x['약속'] === mid && x['이름'] === name && ph[x['날짜']] !== undefined);
