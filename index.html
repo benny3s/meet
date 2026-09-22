@@ -141,14 +141,11 @@ table.sheet td button{appearance:none;border:0;background:transparent;font:inher
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   touch-action:manipulation}
 table.sheet td .hr{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-table.sheet td .hr.no{color:var(--warn);font-weight:600}
-table.sheet td .hr.none{color:var(--muted);font-weight:400;opacity:.6}
 table.sheet td .mm{font-size:10.5px;color:var(--muted);max-width:110px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 table.sheet tr.me th.nm{color:var(--accent)}
 table.sheet tr.me td{background:var(--soft)}
 table.sheet tr.me td button{min-height:48px}
-table.sheet tr.me td .hr.ok{color:var(--accent)}
 table.sheet tr.me td .mm{color:var(--accent);opacity:.85}
 table.sheet td.on{background:var(--accent)}
 table.sheet th.dhead{cursor:pointer}
@@ -444,14 +441,30 @@ h2.bigtitle{font-size:22px;font-weight:900;letter-spacing:-.045em;line-height:1.
 /* 표에서 어디를 눌러야 하는지 (2026-09-22b Benny: "뭘 눌러야할지 잘 안보여") */
 table.sheet tr.me td{background:rgba(var(--accent-rgb),.10)}
 table.sheet tr.me td button{border:1px dashed transparent;border-radius:9px}
-table.sheet tr.me td .hr.none{color:var(--accent);font-weight:700;opacity:.9}
 table.sheet tr.me td button:active{background:rgba(var(--accent-rgb),.18)}
-/* 아직 안 넣은 내 칸 = 연두 점선. 넣은 칸은 조용히 둔다 — 대비로 구분한다
-   (2026-09-22k Benny: "넣은 것과 넣어야할 것이 구분이 잘 안되어서") */
+/* 아직 안 넣은 내 칸 = 연두 점선 + 아주 느린 숨쉬기. 넣은 칸은 조용히 둔다
+   (2026-09-22k Benny: "넣은 것과 넣어야할 것이 구분이 잘 안되어서"
+    2026-09-22l Benny: "너무 튀지 않게 깜빡깜빡") */
 table.sheet tr.me td.todo{background:rgba(var(--accent-rgb),.05)}
-table.sheet tr.me td.todo button{border:1.5px dashed var(--accent);border-radius:9px}
-table.sheet tr.me td:not(.todo) .hr.ok{font-weight:800}
+table.sheet tr.me td.todo button{border:1.5px dashed var(--accent);border-radius:9px;
+  animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  table.sheet tr.me td.todo button{animation:none;opacity:1}
+}
 .callout.done{background:var(--soft);color:var(--ink)}
+.callout .legend{display:block;margin-top:6px;color:var(--muted);font-size:12px;font-weight:600;letter-spacing:-.01em}
+
+/* ○ △ ✕ – 네 가지 상태 — 기호를 크게, 글자는 작게 */
+table.sheet td .hr{display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.15}
+table.sheet td .hr .mk{font-size:17px;font-weight:800;letter-spacing:0}
+table.sheet td .hr .tx{font-size:11px;font-weight:600;opacity:.85;white-space:nowrap}
+table.sheet td .hr.all{color:var(--accent)}
+table.sheet td .hr.part{color:var(--ink)}
+table.sheet td .hr.part .mk{color:var(--accent)}
+table.sheet td .hr.no{color:var(--warn)}
+table.sheet td .hr.none{color:var(--muted);opacity:.75}
+table.sheet tr.me td .hr.none{color:var(--accent);opacity:1}
 .callout{display:block;margin:0 0 11px;padding:10px 12px;border-radius:12px;
   background:rgba(var(--accent-rgb),.09);color:var(--ink);font-size:12.5px;line-height:1.5}
 .callout b{color:var(--accent)}
@@ -1046,7 +1059,7 @@ header .hact .btn{font-size:13px;padding:8px 11px;min-height:42px}
    밴드매니저(band-manager)의 캘린더 부분만 떼어내 만든 단일 파일 앱.
    약속 하나 = 링크 하나(?m=<id>). 목록은 어디에도 나오지 않는다.        */
 
-const BUILD = "2026-09-22k";
+const BUILD = "2026-09-22l";
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbzwTE7EF4fav3ziLiZn7NNfOmG4XFXfxGxx3x4tkvqsVe2l29Ck6yNMXbYn0gVwmliJpw/exec";
 
 /* ═══ 공통 ═══ */
@@ -1659,6 +1672,9 @@ function drawSheet(){
       b2.textContent = todo.slice(0, 4).map(fmtD).join(", ") + (todo.length > 4 ? " …" : "");
       hint.append(b2, document.createTextNode(")을 눌러 입력해주세요."));
     }
+    const lg = document.createElement("span"); lg.className = "legend";
+    lg.textContent = "○ 다 돼요 · △ 일부만 · ✕ 안 돼요 · – 미정";
+    hint.appendChild(lg);
   }
 
   /* ⚠️ 입력 표에는 '제일 많음' 추천을 **넣지 않는다**
@@ -1715,10 +1731,27 @@ function drawSheet(){
       const hrs  = mine ? myHours(d) : (H[n] || {})[d];
       const ans  = mine ? myAnswered(d) : Array.isArray(hrs);
       const memo = mine ? (noteDraft[d] || "") : ((N[n] || {})[d] || "");
+      /* ○ 다 돼요 / △ 일부 / ✕ 안 돼요 / – 미정 — 네 가지를 한눈에
+         (2026-09-22l Benny: "되면 O, 부분적으로 되면 세모, 안되면 X, 미정은 –") */
       const sp = document.createElement("span");
-      if (ans && hrs && hrs.length){ sp.className = "hr ok"; sp.textContent = runsOf(hrs, true); }
-      else if (ans){ sp.className = "hr no"; sp.textContent = "✗"; }
-      else { sp.className = "hr none"; sp.textContent = mine ? "＋ 입력" : "—"; }
+      const full = hoursFor(d).length;
+      if (ans && hrs && hrs.length){
+        const whole = (hrs.length >= full && full > 0);
+        sp.className = "hr " + (whole ? "all" : "part");
+        sp.innerHTML = '<span class="mk"></span><span class="tx"></span>';
+        sp.querySelector(".mk").textContent = whole ? "○" : "△";
+        sp.querySelector(".tx").textContent = whole ? "다 돼요" : runsOf(hrs, true);
+      } else if (ans){
+        sp.className = "hr no";
+        sp.innerHTML = '<span class="mk"></span><span class="tx"></span>';
+        sp.querySelector(".mk").textContent = "✕";
+        sp.querySelector(".tx").textContent = "안 돼요";
+      } else {
+        sp.className = "hr none";
+        sp.innerHTML = '<span class="mk"></span><span class="tx"></span>';
+        sp.querySelector(".mk").textContent = "–";
+        sp.querySelector(".tx").textContent = mine ? "입력" : "미정";
+      }
       if (mine && !ans) td.className = "todo";      // 아직 안 넣은 내 칸
       b.appendChild(sp);
       if (memo){ const mm = document.createElement("span"); mm.className = "mm"; mm.textContent = memo; b.appendChild(mm); }
